@@ -1,0 +1,26 @@
+import sqlite3
+
+# Connexion à la base
+conn = sqlite3.connect("music.db")
+cursor = conn.cursor()
+
+# Données à insérer
+genres = [
+    ("rock",),
+    ("jazz",),
+    ("chill",),
+    ("var_fr",),
+    ("tendance",),
+    ("électro",),
+	("pop",),
+	("rap",),
+	("classique",),
+	("metal",)
+]
+
+# Insertion dans la table genre
+cursor.executemany("INSERT INTO genre (nom_genre) VALUES (?)", genres)
+
+# Sauvegarder les changements
+conn.commit()
+conn.close()

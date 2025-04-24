@@ -1,0 +1,80 @@
+import sqlite3
+
+# Connexion à la base
+conn = sqlite3.connect("music.db")
+cursor = conn.cursor()
+
+# Liste de mots-clés
+mots_cles = [
+    ("fatigué",),
+    ("motivé",),
+    ("concentration",),
+    ("sport",),
+    ("détente",),
+    ("stress",),
+    ("travail",),
+    ("soirée",),
+    ("calme",),
+    ("énergie",),
+	("musique",),
+	("ambiance",),
+	("réveil",),
+	("repos",),
+	("éveil",),
+	("sommeil",),
+	("concentration",),
+	("étude",),
+	("loisir",),
+	("mélancolie",),
+	("nostalgie",),
+	("joie",),
+	("tristesse",),
+	("colère",),
+	("amour",),
+	("haine",),
+	("peur",),
+	("espoir",),
+	("rêve",),
+	("réalité",),
+	("voyage",),
+	("nature",),
+	("ville",),
+	("campagne",),
+	("plage",),
+	("montagne",),
+	("mer",),
+	("lumière",),
+	("ombre",),
+	("silence",),
+	("bruit",),
+	("musique classique",),
+	("rock",),
+	("pop",),
+	("jazz",),
+	("rap",),
+	("électro",),
+	("blues",),
+	("reggae",),
+	("country",),
+	("folk",),
+	("indie",),
+	("soul",),
+	("funk",),
+	("metal",),
+	("punk",),
+	("hip-hop",),
+	("R&B",),
+	("gospel",),
+	("latino",),
+	("afrobeat",),
+	("k-pop",),
+	("chanson française",)
+]
+
+# Insertion dans la table mot_cle
+cursor.executemany("INSERT INTO mot_cle (mot) VALUES (?)", mots_cles)
+
+# Sauvegarder et fermer
+conn.commit()
+conn.close()
+print("✅ Base de données initialisée avec succès.")

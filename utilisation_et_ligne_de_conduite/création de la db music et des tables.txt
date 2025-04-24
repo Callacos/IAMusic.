@@ -1,0 +1,43 @@
+import sqlite3
+
+# Connexion à la base (elle sera créée si elle n'existe pas)
+conn = sqlite3.connect("music.db")
+cursor = conn.cursor()
+
+# Création des tables (copie-colle ici les CREATE TABLE donnés)
+cursor.executescript("""
+CREATE TABLE gout (
+    id_gout INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom_utilisateur TEXT
+);
+
+CREATE TABLE genre (
+    id_genre INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom_genre TEXT
+);
+
+CREATE TABLE mot_cle (
+    id_mot_cle INTEGER PRIMARY KEY AUTOINCREMENT,
+    mot TEXT
+);
+
+CREATE TABLE association (
+    id_association INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_genre INTEGER,
+    id_mot_cle INTEGER,
+    FOREIGN KEY (id_genre) REFERENCES genre(id_genre),
+    FOREIGN KEY (id_mot_cle) REFERENCES mot_cle(id_mot_cle)
+);
+
+CREATE TABLE playlist (
+    id_playlist INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_association INTEGER,
+    uri TEXT,
+    FOREIGN KEY (id_association) REFERENCES association(id_association)
+);
+""")
+
+conn.commit()
+conn.close()
+print("✅ Base de données initialisée avec succès.")
+
