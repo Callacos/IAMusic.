@@ -1,80 +1,31 @@
 import sqlite3
 
-# Connexion à la base
 conn = sqlite3.connect("music.db")
 cursor = conn.cursor()
+# Récupère l'id du mot "stress"
+cursor.execute("SELECT id_mot_cle FROM mot_cle WHERE mot = ?", ("stress",))
+id_stress = cursor.fetchone()[0]
 
-# Liste de mots-clés
-mots_cles = [
-    ("fatigué",),
-    ("motivé",),
-    ("concentration",),
-    ("sport",),
-    ("détente",),
-    ("stress",),
-    ("travail",),
-    ("soirée",),
-    ("calme",),
-    ("énergie",),
-	("musique",),
-	("ambiance",),
-	("réveil",),
-	("repos",),
-	("éveil",),
-	("sommeil",),
-	("concentration",),
-	("étude",),
-	("loisir",),
-	("mélancolie",),
-	("nostalgie",),
-	("joie",),
-	("tristesse",),
-	("colère",),
-	("amour",),
-	("haine",),
-	("peur",),
-	("espoir",),
-	("rêve",),
-	("réalité",),
-	("voyage",),
-	("nature",),
-	("ville",),
-	("campagne",),
-	("plage",),
-	("montagne",),
-	("mer",),
-	("lumière",),
-	("ombre",),
-	("silence",),
-	("bruit",),
-	("musique classique",),
-	("rock",),
-	("pop",),
-	("jazz",),
-	("rap",),
-	("électro",),
-	("blues",),
-	("reggae",),
-	("country",),
-	("folk",),
-	("indie",),
-	("soul",),
-	("funk",),
-	("metal",),
-	("punk",),
-	("hip-hop",),
-	("R&B",),
-	("gospel",),
-	("latino",),
-	("afrobeat",),
-	("k-pop",),
-	("chanson française",)
+# Récupère l'id du genre "chill"
+cursor.execute("SELECT id_genre FROM genre WHERE nom_genre = ?", ("chill",))
+id_chill = cursor.fetchone()[0]
+
+# Récupère l'id_association correspondant
+cursor.execute(
+    "SELECT id_association FROM association WHERE id_mot_cle = ? AND id_genre = ?",
+    (id_stress, id_chill)
+)
+id_association = cursor.fetchone()[0]
+# Exemple de playlists Spotify associées à "stress + chill"
+playlists = [
+    (id_association, "spotify:playlist:0blvE99Ov7R5SZc9GY3NM2"),
+    (id_association, "spotify:playlist:6UDAaJGCtNUDIHCj1yPL5Y")
 ]
 
-# Insertion dans la table mot_cle
-cursor.executemany("INSERT INTO mot_cle (mot) VALUES (?)", mots_cles)
-
-# Sauvegarder et fermer
+cursor.executemany(
+    "INSERT INTO playlist (id_association, uri) VALUES (?, ?)",
+    playlists
+)
 conn.commit()
 conn.close()
-print("✅ Base de données initialisée avec succès.")
+print("Playlists ajoutées avec succès.")
