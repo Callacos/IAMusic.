@@ -1,31 +1,51 @@
 import sqlite3
 
+# Connexion à la base
 conn = sqlite3.connect("music.db")
 cursor = conn.cursor()
-# Récupère l'id du mot "stress"
-cursor.execute("SELECT id_mot_cle FROM mot_cle WHERE mot = ?", ("stress",))
-id_stress = cursor.fetchone()[0]
 
-# Récupère l'id du genre "chill"
-cursor.execute("SELECT id_genre FROM genre WHERE nom_genre = ?", ("chill",))
-id_chill = cursor.fetchone()[0]
-
-# Récupère l'id_association correspondant
-cursor.execute(
-    "SELECT id_association FROM association WHERE id_mot_cle = ? AND id_genre = ?",
-    (id_stress, id_chill)
+# Créer les tables si elles n'existent pas
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS gout (
+    id_gout INTEGER PRIMARY KEY,
+    nom TEXT NOT NULL
 )
-id_association = cursor.fetchone()[0]
-# Exemple de playlists Spotify associées à "stress + chill"
-playlists = [
-    (id_association, "spotify:playlist:0blvE99Ov7R5SZc9GY3NM2"),
-    (id_association, "spotify:playlist:6UDAaJGCtNUDIHCj1yPL5Y")
+''')
+
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS utilisateur (
+    id_utilisateur INTEGER PRIMARY KEY,
+    nom TEXT NOT NULL
+)
+''')
+
+# Remplir la table gout
+gouts = [
+    (1, "rock"),
+    (2, "jazz"),
+    (3, "chill"),
+    (4, "var_fr"),
+    (5, "tendance"),
+    (6, "électro"),
+    (7, "pop"),
+    (8, "rap"),
+    (9, "classique"),
+    (10, "metal")
 ]
 
-cursor.executemany(
-    "INSERT INTO playlist (id_association, uri) VALUES (?, ?)",
-    playlists
-)
+cursor.executemany("INSERT OR IGNORE INTO gout (id_gout, nom) VALUES (?, ?)", gouts)
+
+# Remplir la table utilisateur
+utilisateurs = [
+    (1, "Alice"),
+    (2, "Bob"),
+    (3, "Charlie")
+]
+
+cursor.executemany("INSERT OR IGNORE INTO utilisateur (id_utilisateur, nom) VALUES (?, ?)", utilisateurs)
+
+# Sauvegarder et fermer
 conn.commit()
 conn.close()
-print("Playlists ajoutées avec succès.")
+
+print("Base de données initialisée avec succès!")
