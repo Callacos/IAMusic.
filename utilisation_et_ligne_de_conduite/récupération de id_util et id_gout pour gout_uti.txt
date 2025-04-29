@@ -1,0 +1,34 @@
+import sqlite3
+
+# Connexion à la base
+conn = sqlite3.connect("music.db")
+cursor = conn.cursor()
+
+# Récupérer tous les id_utilisateur
+cursor.execute("SELECT id_utilisateur FROM utilisateur")
+utilisateurs = cursor.fetchall()
+
+# Récupérer tous les id_gout
+cursor.execute("SELECT id_gout FROM gout")
+gouts = cursor.fetchall()
+
+# Exemple d'association : chaque utilisateur aime plusieurs gouts
+gout_utilisateur_data = []
+
+# Exemple simple : associer chaque utilisateur à 2 goûts différents
+for i, utilisateur in enumerate(utilisateurs):
+    id_utilisateur = utilisateur[0]
+    if i < len(gouts) - 1:
+        gout_utilisateur_data.append((id_utilisateur, gouts[i][0]))
+        gout_utilisateur_data.append((id_utilisateur, gouts[i+1][0]))
+
+# Insérer dans la table gout_utilisateur
+cursor.executemany(
+    "INSERT INTO gout_utilisateur (id_utilisateur, id_gout) VALUES (?, ?)",
+    gout_utilisateur_data
+)
+
+# Sauvegarder et fermer
+conn.commit()
+conn.close()
+

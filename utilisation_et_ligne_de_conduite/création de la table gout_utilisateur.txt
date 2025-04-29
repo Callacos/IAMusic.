@@ -1,0 +1,33 @@
+import sqlite3
+
+# Connexion
+conn = sqlite3.connect('music.db')
+cursor = conn.cursor()
+
+# 1. Créer la table gout_utilisateur
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS gout_utilisateur (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_utilisateur INTEGER NOT NULL,
+    id_gout INTEGER NOT NULL,
+    FOREIGN KEY (id_utilisateur) REFERENCES utilisateur(id_utilisateur),
+    FOREIGN KEY (id_gout) REFERENCES gout(id_gout)
+);
+""")
+
+# 2. Ajouter une colonne id_gout_utilisateur dans association (si pas déjà présente)
+# (Attention : SQLite ne peut pas ajouter directement une clé étrangère avec ALTER TABLE, on ajoute juste la colonne)
+try:
+    cursor.execute("ALTER TABLE association ADD COLUMN id_gout_utilisateur INTEGER;")
+except sqlite3.OperationalError:
+    # La colonne existe déjà
+    print("La colonne 'id_gout_utilisateur' existe déjà dans 'association'.")
+
+# 3. (optionnel) Si tu veux plus tard lier les données manuellement dans association,
+# il faudra faire des INSERT ou UPDATE en liant id_gout_utilisateur.
+
+conn.commit()
+conn.close()
+
+print("Table 'gout_utilisateur' créée et colonne 'id_gout_utilisateur' ajoutée à 'association'.")
+

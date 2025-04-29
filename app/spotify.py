@@ -33,7 +33,7 @@ def jouer_playlist(uri):
         return
 
     try:
-        sp.transfer_playback(device_id=device_id, force=True)
+        sp.transfer_playback(device_id=device_id)
         sp.start_playback(context_uri=uri)
         print(f"✅ Lecture lancée : {uri}")
     except Exception as e:

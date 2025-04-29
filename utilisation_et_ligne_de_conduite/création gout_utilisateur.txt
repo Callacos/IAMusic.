@@ -1,0 +1,28 @@
+import sqlite3
+
+# Connexion à ta base de données
+conn = sqlite3.connect("music.db")
+cursor = conn.cursor()
+
+# 1. Créer la table gout_utilisateur
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS gout_utilisateur (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_utilisateur INTEGER NOT NULL,
+    id_gout INTEGER NOT NULL,
+    FOREIGN KEY (id_utilisateur) REFERENCES utilisateur(id_utilisateur),
+    FOREIGN KEY (id_gout) REFERENCES gout(id_gout)
+)
+""")
+
+# 2. Ajouter la colonne id_gout_utilisateur à la table association (si elle n'existe pas déjà)
+# SQLite ne supporte pas "IF NOT EXISTS" pour ADD COLUMN, donc on doit vérifier autrement si besoin
+try:
+    cursor.execute("ALTER TABLE association ADD COLUMN id_gout_utilisateur INTEGER REFERENCES gout_utilisateur(id)")
+except sqlite3.OperationalError:
+    # La colonne existe déjà
+    print("La colonne id_gout_utilisateur existe déjà dans association.")
+
+# Sauvegarder et fermer
+conn.commit()
+conn.close()

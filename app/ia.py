@@ -42,4 +42,8 @@ def trouver_playlists_depuis_phrase(phrase):
                 uris += [row[0] for row in cursor.fetchall()]
 
     conn.close()
+
+    if not uris:
+        # Retourner une playlist par défaut si aucune correspondance
+        return ["spotify:playlist:5gcRNWl6qZOW5Zevr9y2e6"]
     return uris

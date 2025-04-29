@@ -1,51 +1,29 @@
 import sqlite3
 
-# Connexion à la base
-conn = sqlite3.connect("music.db")
+# Connexion à la base de données
+conn = sqlite3.connect('music.db')
 cursor = conn.cursor()
 
-# Créer les tables si elles n'existent pas
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS gout (
-    id_gout INTEGER PRIMARY KEY,
-    nom TEXT NOT NULL
-)
-''')
+# Exemple d'association entre id_association et id_gout_utilisateur
+# ➔ Ici tu dois mettre les bonnes correspondances que tu veux toi
+remplissage = {
+    1: 3,  # id_association 1 → id_gout_utilisateur 3
+    2: 5,  # id_association 2 → id_gout_utilisateur 5
+    3: 2,  # id_association 3 → id_gout_utilisateur 2
+    4: 7   # id_association 4 → id_gout_utilisateur 7
+}
 
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS utilisateur (
-    id_utilisateur INTEGER PRIMARY KEY,
-    nom TEXT NOT NULL
-)
-''')
+# Parcours du dictionnaire et mise à jour de chaque ligne
+for id_association, id_gout_utilisateur in remplissage.items():
+    cursor.execute(
+        "UPDATE association SET id_gout_utilisateur = ? WHERE id_association = ?",
+        (id_gout_utilisateur, id_association)
+    )
 
-# Remplir la table gout
-gouts = [
-    (1, "rock"),
-    (2, "jazz"),
-    (3, "chill"),
-    (4, "var_fr"),
-    (5, "tendance"),
-    (6, "électro"),
-    (7, "pop"),
-    (8, "rap"),
-    (9, "classique"),
-    (10, "metal")
-]
-
-cursor.executemany("INSERT OR IGNORE INTO gout (id_gout, nom) VALUES (?, ?)", gouts)
-
-# Remplir la table utilisateur
-utilisateurs = [
-    (1, "Alice"),
-    (2, "Bob"),
-    (3, "Charlie")
-]
-
-cursor.executemany("INSERT OR IGNORE INTO utilisateur (id_utilisateur, nom) VALUES (?, ?)", utilisateurs)
-
-# Sauvegarder et fermer
+# Sauvegarde des changements
 conn.commit()
+
+# Fermeture de la connexion
 conn.close()
 
-print("Base de données initialisée avec succès!")
+print("Mise à jour terminée avec succès ✅")
