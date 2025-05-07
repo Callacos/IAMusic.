@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IAMusic 🎶</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+  <main>
+    <h1>Quelle est ton humeur ?</h1>
+    <form id="phraseForm">
+      <input type="text" id="phraseInput" placeholder="Ex: Je veux me relaxer après le travail" required />
+      <button type="submit">Envoyer</button>
+    </form>
+    <div id="resultat"></div>
+  </main>
+
+  <script>
+    document.getElementById("phraseForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const phrase = document.getElementById("phraseInput").value;
+
+      const response = await fetch("http://127.0.0.1:5000/phrase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phrase: phrase })
+      });
+
+      const data = await response.json();
+      const resultatDiv = document.getElementById("resultat");
+
+      if (data.uri) {
+        resultatDiv.innerHTML = `🎧 Playlist lancée : <code>${data.uri}</code>`;
+      } else {
+        resultatDiv.innerHTML = "❌ Aucune playlist trouvée.";
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Choisis tes styles</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+  <main class="container">
+    <h1>🎧 Tes styles préférés</h1>
+    <form id="preferencesForm" method="POST">
+      <p>Choisis au moins un style musical :</p>
+      <label><input type="checkbox" name="genres" value="1"> Chill</label><br>
+      <label><input type="checkbox" name="genres" value="2"> Rock</label><br>
+      <label><input type="checkbox" name="genres" value="3"> Jazz</label><br>
+      <label><input type="checkbox" name="genres" value="4"> Électro</label><br>
+      <label><input type="checkbox" name="genres" value="5"> Classique</label><br>
+      <label><input type="checkbox" name="genres" value="6"> Rap</label><br><br>
+      <button type="submit">Valider mes goûts</button>
+    </form>
+    <div id="resultat"></div>
+  </main>
+
+
+</body>
+</html>

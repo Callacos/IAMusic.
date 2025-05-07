@@ -1,29 +1,26 @@
 import sqlite3
+import os
 
-# Connexion à la base de données
-conn = sqlite3.connect('music.db')
+# Chemin vers la base
+db_path = os.path.join(os.path.dirname(__file__), "music.db")
+conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
-# Exemple d'association entre id_association et id_gout_utilisateur
-# ➔ Ici tu dois mettre les bonnes correspondances que tu veux toi
-remplissage = {
-    1: 3,  # id_association 1 → id_gout_utilisateur 3
-    2: 5,  # id_association 2 → id_gout_utilisateur 5
-    3: 2,  # id_association 3 → id_gout_utilisateur 2
-    4: 7   # id_association 4 → id_gout_utilisateur 7
-}
+# Vérifier si la colonne "email" existe déjà
+cursor.execute("PRAGMA table_info(utilisateur);")
+colonnes = [col[1] for col in cursor.fetchall()]
 
-# Parcours du dictionnaire et mise à jour de chaque ligne
-for id_association, id_gout_utilisateur in remplissage.items():
-    cursor.execute(
-        "UPDATE association SET id_gout_utilisateur = ? WHERE id_association = ?",
-        (id_gout_utilisateur, id_association)
-    )
+# Ajouter les colonnes manquantes
+if "email" not in colonnes:
+    cursor.execute("ALTER TABLE utilisateur ADD COLUMN email TEXT;")
+if "mot_de_passe" not in colonnes:
+    cursor.execute("ALTER TABLE utilisateur ADD COLUMN mot_de_passe TEXT;")
+if "a_choisi_gouts" not in colonnes:
+    cursor.execute("ALTER TABLE utilisateur ADD COLUMN a_choisi_gouts INTEGER DEFAULT 0;")
 
-# Sauvegarde des changements
+# Créer l’index unique sur l’email si besoin
+cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_unique ON utilisateur(email);")
+
 conn.commit()
-
-# Fermeture de la connexion
 conn.close()
-
-print("Mise à jour terminée avec succès ✅")
+print("✅ Table utilisateur mise à jour.")

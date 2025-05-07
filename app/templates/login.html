@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion IAMusic</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+</head>
+<body>
+  <main class="container">
+    <h1>🎶 Connexion IAMusic</h1>
+    <form id="loginForm" method="POST" action="/login">
+      {% if message %}
+      <p style="color: red;">{{ message }}</p>
+    {% endif %}
+  
+    
+	  <input type="text" name="nom" id="nom" placeholder="Nom (obligatoire si nouveau compte)" required />
+      <input type="email" name="email" id="email" placeholder="Email" required />
+      <input type="password" name="mot_de_passe" id="mot_de_passe" placeholder="Mot de passe" required />
+      <button type="submit">Se connecter</button>
+    </form>
+    <div id="resultat"></div>
+  </main>
+
+
+</body>
+</html>
