@@ -15,6 +15,15 @@
       <button type="submit">Envoyer</button>
     </form>
     <div id="resultat"></div>
+
+    <div class="menu-container">
+      <button class="menu-button" onclick="toggleMenu()">☰</button>
+      <div id="dropdown-menu" class="dropdown-content">
+        <a href="/logout">Déconnexion</a>
+        <!-- Tu pourras ajouter ici d’autres options plus tard -->
+      </div>
+    </div>
+    
   </main>
 
   <script>
@@ -38,5 +47,26 @@
       }
     });
   </script>
+
+<script>
+  function toggleMenu() {
+    const menu = document.getElementById("dropdown-menu");
+    menu.classList.toggle("show");
+  }
+
+  // Ferme le menu si on clique ailleurs
+  window.onclick = function(event) {
+    if (!event.target.matches('.menu-button')) {
+      const dropdowns = document.getElementsByClassName("dropdown-content");
+      for (let i = 0; i < dropdowns.length; i++) {
+        const openDropdown = dropdowns[i];
+        if (openDropdown.classList.contains('show')) {
+          openDropdown.classList.remove('show');
+        }
+      }
+    }
+  }
+</script>
+
 </body>
 </html>

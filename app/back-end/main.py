@@ -6,6 +6,7 @@ from spotify import jouer_playlist
 import os
 import sqlite3
 from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash
 
 def get_db_connection():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database'))
@@ -120,6 +121,42 @@ def login():
                 conn.close()
 
     return render_template('login.html', message=message)
+
+@app.route('/connexion', methods=['GET', 'POST'])
+def connexion():
+    message = None
+
+    if request.method == 'POST':
+        email = request.form.get('email')
+        mot_de_passe = request.form.get('mot_de_passe')
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Recherche de l'utilisateur par email
+        cursor.execute("SELECT nom, mot_de_passe FROM utilisateur WHERE email = ?", (email,))
+        utilisateur = cursor.fetchone()
+        conn.close()
+
+        if utilisateur:
+            nom_en_db, mot_de_passe_hash = utilisateur
+            if check_password_hash(mot_de_passe_hash, mot_de_passe):
+                session['user_id'] = nom_en_db
+                session['first_login'] = False  # car il s’est déjà connecté
+                return redirect(url_for('index'))
+            else:
+                message = "Mot de passe incorrect."
+        else:
+            message = "Aucun compte avec cet email."
+
+    return render_template('connexion.html', message=message)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+
 
 
 @app.route('/preferences', methods=['GET', 'POST'])
