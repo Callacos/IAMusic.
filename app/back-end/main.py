@@ -7,6 +7,8 @@ import os
 import sqlite3
 from werkzeug.security import generate_password_hash
 from werkzeug.security import check_password_hash
+from spotipy.oauth2 import SpotifyOAuth
+import spotipy
 
 def get_db_connection():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database'))
@@ -112,7 +114,7 @@ def login():
 
                 session['user_id'] = nom
                 session['first_login'] = True
-                return redirect(url_for('preferences'))
+                return redirect(url_for('spotify_login'))
 
             except Exception as e:
                 print("Erreur DB:", e)
@@ -121,6 +123,42 @@ def login():
                 conn.close()
 
     return render_template('login.html', message=message)
+
+sp_oauth = SpotifyOAuth(
+    client_id=os.getenv("SPOTIPY_CLIENT_ID"),
+    client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
+    redirect_uri="http://127.0.0.1:5000/callback",
+    scope="user-read-playback-state user-modify-playback-state"
+)
+
+@app.route('/spotify-login')
+def spotify_login():
+    auth_url = sp_oauth.get_authorize_url()
+    return redirect(auth_url)
+
+@app.route('/callback')
+def callback():
+    code = request.args.get('code')
+    token_info = sp_oauth.get_access_token(code)
+
+    # Sauvegarde du token dans la session utilisateur
+    session['spotify_token'] = token_info['access_token']
+    return redirect(url_for('preferences'))
+
+
+@app.route('/play/<playlist_uri>')
+def play_playlist(playlist_uri):
+    if 'spotify_token' not in session:
+        return redirect(url_for('spotify_login'))
+
+    sp = spotipy.Spotify(auth=session['spotify_token'])
+
+    try:
+        sp.start_playback(context_uri=playlist_uri)
+        return "Lecture lancée !"
+    except Exception as e:
+        return f"Erreur : {e}"
+
 
 @app.route('/connexion', methods=['GET', 'POST'])
 def connexion():
