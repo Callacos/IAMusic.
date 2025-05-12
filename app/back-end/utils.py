@@ -8,7 +8,8 @@ sp_oauth = SpotifyOAuth(
     client_id=os.getenv("SPOTIPY_CLIENT_ID"),
     client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
     redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "http://127.0.0.1:5000/callback"),
-    scope="user-read-playback-state user-modify-playback-state"
+    scope = "user-read-playback-state user-modify-playback-state user-read-private"
+
 )
 
 def get_valid_spotify_token():

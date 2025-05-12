@@ -30,14 +30,18 @@ def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    # ✅ Ceci sera bien exécuté si l'utilisateur est connecté
     profile = get_spotify_profile()
     if profile:
-        print("🎧 Utilisateur Spotify :", profile['display_name'], "-", profile['id'], "-", profile['product'])
+        display_name = profile.get('display_name', 'Inconnu')
+        spotify_id = profile.get('id', 'Inconnu')
+        product = profile.get('product', 'inconnu')
+
+        print("🎧 Utilisateur Spotify :", display_name, "-", spotify_id, "-", product)
     else:
         print("⚠️ Aucun profil Spotify connecté ou token invalide.")
 
     return render_template('index.html')
+
 
 
 
@@ -145,22 +149,30 @@ def callback():
     token_info = sp_oauth.get_access_token(code)
     session['spotify_token_info'] = token_info
 
-    # Récupérer le profil utilisateur Spotify
     sp = spotipy.Spotify(auth=token_info['access_token'])
     profile = sp.current_user()
 
-    # ✅ Utilisation sécurisée de .get() pour éviter KeyError
     display_name = profile.get('display_name', 'Inconnu')
     spotify_id = profile.get('id', 'Inconnu')
+    print("🧪 PROFIL COMPLET RENVOYÉ PAR SPOTIFY :", profile)
     product = profile.get('product', 'inconnu')
 
     print("🎧 Spotify connecté :", display_name, "-", spotify_id, "-", product)
 
+    # Bloque si le compte n'est pas premium
     if product != 'premium':
         print("❌ COMPTE GRATUIT BLOQUÉ :", spotify_id)
-        return "❌ Ce compte Spotify n'est pas Premium. IAMusic nécessite un compte Premium pour fonctionner."
+        return render_template(
+            "spotify_error.html",
+            message="Ce compte Spotify n'est pas Premium. IAMusic nécessite un compte Premium pour fonctionner."
+    )
+
+    # On stocke le type dans la session si tu veux l'utiliser ailleurs
+    session['spotify_type'] = product
+    session['spotify_display_name'] = display_name
 
     return redirect(url_for('preferences'))
+
 
 
 

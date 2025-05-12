@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Erreur Spotify</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <h1>🚫 Erreur Spotify</h1>
+    <p style="color: red;">{{ message }}</p>
+    <a href="/login">⬅️ Retour à l’accueil IAMusic</a>
+  </main>
+</body>
+</html>
