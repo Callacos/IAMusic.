@@ -7,8 +7,9 @@ import os
 import sqlite3
 from werkzeug.security import generate_password_hash
 from werkzeug.security import check_password_hash
-from spotipy.oauth2 import SpotifyOAuth
+from utils import get_valid_spotify_token, sp_oauth, get_spotify_profile
 import spotipy
+from utils import get_valid_spotify_token
 
 def get_db_connection():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database'))
@@ -28,7 +29,16 @@ app.secret_key = 'une_clé_secrète_pour_la_session'
 def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
+
+    # ✅ Ceci sera bien exécuté si l'utilisateur est connecté
+    profile = get_spotify_profile()
+    if profile:
+        print("🎧 Utilisateur Spotify :", profile['display_name'], "-", profile['id'], "-", profile['product'])
+    else:
+        print("⚠️ Aucun profil Spotify connecté ou token invalide.")
+
     return render_template('index.html')
+
 
 
 
@@ -124,13 +134,6 @@ def login():
 
     return render_template('login.html', message=message)
 
-sp_oauth = SpotifyOAuth(
-    client_id=os.getenv("SPOTIPY_CLIENT_ID"),
-    client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
-    redirect_uri="http://127.0.0.1:5000/callback",
-    scope="user-read-playback-state user-modify-playback-state"
-)
-
 @app.route('/spotify-login')
 def spotify_login():
     auth_url = sp_oauth.get_authorize_url()
@@ -140,24 +143,79 @@ def spotify_login():
 def callback():
     code = request.args.get('code')
     token_info = sp_oauth.get_access_token(code)
+    session['spotify_token_info'] = token_info
 
-    # Sauvegarde du token dans la session utilisateur
-    session['spotify_token'] = token_info['access_token']
+    # Récupérer le profil utilisateur Spotify
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    profile = sp.current_user()
+
+    # ✅ Utilisation sécurisée de .get() pour éviter KeyError
+    display_name = profile.get('display_name', 'Inconnu')
+    spotify_id = profile.get('id', 'Inconnu')
+    product = profile.get('product', 'inconnu')
+
+    print("🎧 Spotify connecté :", display_name, "-", spotify_id, "-", product)
+
+    if product != 'premium':
+        print("❌ COMPTE GRATUIT BLOQUÉ :", spotify_id)
+        return "❌ Ce compte Spotify n'est pas Premium. IAMusic nécessite un compte Premium pour fonctionner."
+
     return redirect(url_for('preferences'))
 
 
-@app.route('/play/<playlist_uri>')
+
+
+
+
+def get_valid_spotify_token():
+    token_info = session.get('spotify_token_info', None)
+
+    if not token_info:
+        return None
+
+    if sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+        session['spotify_token_info'] = token_info  # met à jour la session
+
+    return token_info['access_token']
+
+
+    
+@app.route('/play/<path:playlist_uri>')
 def play_playlist(playlist_uri):
-    if 'spotify_token' not in session:
+    access_token = get_valid_spotify_token()
+    if not access_token:
         return redirect(url_for('spotify_login'))
 
-    sp = spotipy.Spotify(auth=session['spotify_token'])
+    sp = spotipy.Spotify(auth=access_token)
 
     try:
-        sp.start_playback(context_uri=playlist_uri)
-        return "Lecture lancée !"
+        # Affiche les appareils connectés
+        devices = sp.devices()
+        print("Appareils visibles :", devices)
+
+        device_id = None
+        for d in devices['devices']:
+            if d['is_active']:
+                device_id = d['id']
+                break
+
+        if not device_id:
+            return "Aucun appareil Spotify actif trouvé. Ouvre Spotify sur ton téléphone ou PC."
+
+        # Lance la lecture sur l'appareil actif
+        sp.start_playback(device_id=device_id, context_uri=playlist_uri)
+        return f"Lecture lancée sur ton appareil : {device_id}"
+
     except Exception as e:
-        return f"Erreur : {e}"
+        print("Erreur de lecture Spotify :", e)
+        return f"Erreur lors du lancement de la playlist : {e}"
+    
+    devices = sp.devices()
+    print("🎯 Appareils trouvés :", [d['name'] for d in devices['devices']])
+
+
+
 
 
 @app.route('/connexion', methods=['GET', 'POST'])
@@ -256,6 +314,21 @@ def preferences():
         conn.close()
 
     return render_template('preferences.html', gouts=gouts_disponibles)
+
+@app.route('/test-play')
+def test_play():
+    access_token = get_valid_spotify_token()
+    if not access_token:
+        return redirect(url_for('spotify_login'))
+
+    sp = spotipy.Spotify(auth=access_token)
+    try:
+        sp.start_playback(uris=["spotify:track:7ouMYWpwJ422jRcDASZB7P"])  # un titre universel
+        return "Test de lecture OK"
+    except Exception as e:
+        print("❌ Erreur Spotify :", e)
+        return f"❌ Erreur : {e}"
+
 
 
 
