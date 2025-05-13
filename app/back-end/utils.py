@@ -42,4 +42,13 @@ def get_spotify_profile():
     except Exception as e:
         print("❌ Impossible de récupérer le profil Spotify :", e)
         return None
+    
+def get_spotify_oauth_for_user(nom_utilisateur):
+    return SpotifyOAuth(
+        client_id=os.getenv("SPOTIPY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
+        redirect_uri="http://127.0.0.1:5000/callback",
+        scope="user-read-playback-state user-modify-playback-state user-read-currently-playing",
+        cache_path=f".cache-{nom_utilisateur}"
+    )
 

@@ -10,6 +10,8 @@ from werkzeug.security import check_password_hash
 from utils import get_valid_spotify_token, sp_oauth, get_spotify_profile
 import spotipy
 from utils import get_valid_spotify_token
+from utils import get_spotify_oauth_for_user
+
 
 def get_db_connection():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database'))
@@ -140,21 +142,48 @@ def login():
 
 @app.route('/spotify-login')
 def spotify_login():
+    nom = session.get('user_id')
+    if not nom:
+        return redirect(url_for('login'))
+
+    # 🔄 Supprime tous les fichiers .cache-* sauf celui du user IAMusic actuel
+    for f in os.listdir():
+        if f.startswith(".cache") and f != f".cache-" + nom:
+            os.remove(f)
+
+    # ❌ Supprime aussi le cache du user actuel pour forcer une nouvelle connexion
+    current_cache = f".cache-{nom}"
+    if os.path.exists(current_cache):
+        os.remove(current_cache)
+
+    # 🔐 Création de l’objet OAuth personnalisé pour ce user
+    sp_oauth = get_spotify_oauth_for_user(nom)
     auth_url = sp_oauth.get_authorize_url()
+
     return redirect(auth_url)
+
+
 
 @app.route('/callback')
 def callback():
+    nom = session.get('user_id')
+    if not nom:
+        return redirect(url_for('login'))
+
+    sp_oauth = get_spotify_oauth_for_user(nom)
+
     code = request.args.get('code')
     token_info = sp_oauth.get_access_token(code)
     session['spotify_token_info'] = token_info
 
+    # Connexion à l'API Spotify avec le nouveau token
     sp = spotipy.Spotify(auth=token_info['access_token'])
     profile = sp.current_user()
 
+    print("🧪 PROFIL COMPLET RENVOYÉ PAR SPOTIFY :", profile)
+
     display_name = profile.get('display_name', 'Inconnu')
     spotify_id = profile.get('id', 'Inconnu')
-    print("🧪 PROFIL COMPLET RENVOYÉ PAR SPOTIFY :", profile)
     product = profile.get('product', 'inconnu')
 
     print("🎧 Spotify connecté :", display_name, "-", spotify_id, "-", product)
@@ -165,9 +194,9 @@ def callback():
         return render_template(
             "spotify_error.html",
             message="Ce compte Spotify n'est pas Premium. IAMusic nécessite un compte Premium pour fonctionner."
-    )
+        )
 
-    # On stocke le type dans la session si tu veux l'utiliser ailleurs
+    # Enregistre dans la session
     session['spotify_type'] = product
     session['spotify_display_name'] = display_name
 
@@ -177,17 +206,20 @@ def callback():
 
 
 
-
-
 def get_valid_spotify_token():
-    token_info = session.get('spotify_token_info', None)
+    nom = session.get('user_id')
+    if not nom:
+        return None
+
+    sp_oauth = get_spotify_oauth_for_user(nom)
+    token_info = session.get('spotify_token_info')
 
     if not token_info:
         return None
 
     if sp_oauth.is_token_expired(token_info):
         token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
-        session['spotify_token_info'] = token_info  # met à jour la session
+        session['spotify_token_info'] = token_info
 
     return token_info['access_token']
 
