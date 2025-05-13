@@ -1,26 +1,26 @@
 import spotipy
-from spotipy.oauth2 import SpotifyOAuth
-import os
-from dotenv import load_dotenv
+from flask import session
+from utils import get_valid_spotify_token
 
-# Charger les variables d'environnement
-load_dotenv()
-
-# Initialisation de l'objet Spotify
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
-    client_id=os.getenv("SPOTIPY_CLIENT_ID"),
-    client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
-    redirect_uri="http://localhost:8888/callback",
-    scope="user-library-read user-read-playback-state user-modify-playback-state streaming"
-))
+# Fonction pour créer une instance Spotipy avec le bon token
+def get_spotify_client():
+    access_token = get_valid_spotify_token()
+    if not access_token:
+        print("❌ Token Spotify invalide ou expiré.")
+        return None
+    return spotipy.Spotify(auth=access_token)
 
 # Fonction pour obtenir un appareil actif
-def obtenir_appareil_actif():
-    devices = sp.devices()
-    if not devices['devices']:
-        print("❌ Aucun appareil actif trouvé. Ouvre Spotify sur ton téléphone ou PC.")
+def obtenir_appareil_actif(sp):
+    try:
+        devices = sp.devices()
+        if not devices['devices']:
+            print("❌ Aucun appareil actif trouvé. Ouvre Spotify sur ton téléphone ou PC.")
+            return None
+        return devices['devices'][0]['id']
+    except Exception as e:
+        print("❌ Erreur lors de l’obtention des appareils :", e)
         return None
-    return devices['devices'][0]['id']
 
 # Fonction pour jouer une playlist
 def jouer_playlist(uri):
@@ -28,12 +28,16 @@ def jouer_playlist(uri):
         print("❌ URI de playlist invalide.")
         return
 
-    device_id = obtenir_appareil_actif()
+    sp = get_spotify_client()
+    if not sp:
+        return
+
+    device_id = obtenir_appareil_actif(sp)
     if not device_id:
         return
 
     try:
-        sp.transfer_playback(device_id=device_id)
+        sp.transfer_playback(device_id=device_id, force_play=True)
         sp.start_playback(context_uri=uri)
         print(f"✅ Lecture lancée : {uri}")
     except Exception as e:
