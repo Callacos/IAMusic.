@@ -5,6 +5,7 @@ from ia import trouver_playlists_depuis_phrase
 from spotify import jouer_playlist
 import os
 import sqlite3
+import time
 from werkzeug.security import generate_password_hash
 from werkzeug.security import check_password_hash
 from utils import get_valid_spotify_token, sp_oauth, get_spotify_profile
@@ -159,7 +160,6 @@ def spotify_login():
     return redirect(auth_url)
 
 
-
 @app.route('/callback')
 def callback():
     nom = session.get('user_id')
@@ -173,8 +173,9 @@ def callback():
     code = request.args.get('code')
     token_info = sp_oauth.get_access_token(code)
 
-    # Enregistrement du token dans la session
-    session['spotify_token_info'] = token_info
+    # 💾 Enregistrement des tokens en base de données
+    from utils import save_spotify_tokens  # ajuste le chemin selon ton organisation
+    save_spotify_tokens(nom, token_info)
 
     # Connexion à Spotify avec le token
     sp = spotipy.Spotify(auth=token_info['access_token'])
@@ -197,42 +198,12 @@ def callback():
             message="Ce compte Spotify n'est pas Premium. IAMusic nécessite un compte Premium pour fonctionner."
         )
 
-    # Stockage du type dans session
+    # Stockage du type dans session (facultatif mais utile pour ton app)
     session['spotify_type'] = product
     session['spotify_display_name'] = display_name
 
     return redirect(url_for('preferences'))
 
-
-
-
-
-
-def get_valid_spotify_token():
-    nom = session.get('user_id')
-    if not nom:
-        print("⚠️ Aucun utilisateur en session pour get_valid_spotify_token")
-        return None
-
-    sp_oauth = get_spotify_oauth_for_user(nom)
-
-    token_info = session.get('spotify_token_info', None)
-    if not token_info:
-        print("⚠️ Aucun token_info en session pour", nom)
-        return None
-
-    try:
-        if sp_oauth.is_token_expired(token_info):
-            print("🔄 Token expiré pour", nom, ": rafraîchissement en cours")
-            token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
-            session['spotify_token_info'] = token_info
-        else:
-            print("✅ Token encore valide pour", nom)
-    except Exception as e:
-        print("❌ Erreur lors du rafraîchissement du token Spotify :", e)
-        return None
-
-    return token_info['access_token']
 
 
     
@@ -294,7 +265,8 @@ def connexion():
             if check_password_hash(mot_de_passe_hash, mot_de_passe):
                 session['user_id'] = nom_en_db
                 session['first_login'] = False  # car il s’est déjà connecté
-                return redirect(url_for('index'))
+                return redirect(url_for('spotify_login'))
+
             else:
                 message = "Mot de passe incorrect."
         else:

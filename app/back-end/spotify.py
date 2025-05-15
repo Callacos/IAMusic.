@@ -1,6 +1,7 @@
 import spotipy
 from flask import session
 from utils import get_valid_spotify_token
+from spotify_auth import get_spotify_oauth_for_user
 
 # Fonction pour créer une instance Spotipy avec le bon token
 def get_spotify_client():

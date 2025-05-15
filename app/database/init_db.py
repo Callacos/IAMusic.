@@ -10,16 +10,15 @@ cursor = conn.cursor()
 cursor.execute("PRAGMA table_info(utilisateur);")
 colonnes = [col[1] for col in cursor.fetchall()]
 
-# Ajouter les colonnes manquantes
-if "email" not in colonnes:
-    cursor.execute("ALTER TABLE utilisateur ADD COLUMN email TEXT;")
-if "mot_de_passe" not in colonnes:
-    cursor.execute("ALTER TABLE utilisateur ADD COLUMN mot_de_passe TEXT;")
-if "a_choisi_gouts" not in colonnes:
-    cursor.execute("ALTER TABLE utilisateur ADD COLUMN a_choisi_gouts INTEGER DEFAULT 0;")
+# ✅ Ajout des colonnes pour Spotify
+if "access_token" not in colonnes:
+    cursor.execute("ALTER TABLE utilisateur ADD COLUMN access_token TEXT;")
+if "refresh_token" not in colonnes:
+    cursor.execute("ALTER TABLE utilisateur ADD COLUMN refresh_token TEXT;")
+if "expires_at" not in colonnes:
+    cursor.execute("ALTER TABLE utilisateur ADD COLUMN expires_at REAL;")
 
-# Créer l’index unique sur l’email si besoin
-cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_email_unique ON utilisateur(email);")
+
 
 conn.commit()
 conn.close()
