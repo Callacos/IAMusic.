@@ -1,88 +1,137 @@
-body {
-    font-family: sans-serif;
-    background: #0d0d0d;
-    color: #fff;
-    margin: 0;
-    padding: 1em;
-  }
-  
-  main {
-    max-width: 400px;
-    margin: auto;
-  }
-  
-  h1 {
-    font-size: 1.5em;
-    text-align: center;
-  }
-  
-  form {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-  }
-  
-  input {
-    padding: 1em;
-    border: none;
-    border-radius: 0.5em;
-    font-size: 1em;
-  }
-  
-  button {
-    padding: 1em;
-    font-size: 1em;
-    background-color: #1db954;
-    color: white;
-    border: none;
-    border-radius: 0.5em;
-  }
-  
-  #resultat {
-    margin-top: 1.5em;
-    text-align: center;
-  }
-  
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
-  /* bouton option index.html*/
-  .menu-container {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-  }
-  
-  .menu-button {
-    background-color: #333;
-    color: white;
-    font-size: 24px;
-    border: none;
-    padding: 8px 12px;
-    cursor: pointer;
-    border-radius: 4px;
-  }
-  
-  .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: white;
-    min-width: 160px;
-    border: 1px solid #ccc;
-    box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
-    z-index: 1;
-  }
-  
-  .dropdown-content a {
-    display: block;
-    padding: 10px;
-    color: black;
-    text-decoration: none;
-  }
-  
-  .dropdown-content a:hover {
-    background-color: #f0f0f0;
-  }
-  
-  .show {
-    display: block;
-  }
-  
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+  color: #fff;
+  margin: 0;
+  padding: 2em;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+main {
+  max-width: 400px;
+  width: 100%;
+  background-color: #121212;
+  padding: 2em;
+  border-radius: 1em;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.6s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+  font-size: 1.8em;
+  text-align: center;
+  margin-bottom: 1em;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+input {
+  padding: 1em;
+  border: none;
+  border-radius: 0.5em;
+  font-size: 1em;
+  background-color: #1e1e1e;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #1db954;
+}
+
+button {
+  padding: 1em;
+  font-size: 1em;
+  background-color: #1db954;
+  color: white;
+  border: none;
+  border-radius: 0.5em;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background-color: #1ed760;
+  transform: scale(1.03);
+}
+
+#resultat {
+  margin-top: 1.5em;
+  text-align: center;
+  font-size: 0.9em;
+  color: #ccc;
+}
+
+/* Lien retour connexion / inscription */
+a {
+  color: #1db954;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #1ed760;
+}
+
+/* Menu bouton */
+.menu-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.menu-button {
+  background-color: #333;
+  color: white;
+  font-size: 24px;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.menu-button:hover {
+  background-color: #555;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 160px;
+  border: 1px solid #ccc;
+  box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  display: block;
+  padding: 10px;
+  color: black;
+  text-decoration: none;
+}
+
+.dropdown-content a:hover {
+  background-color: #f0f0f0;
+}
+
+.show {
+  display: block;
+}
