@@ -28,9 +28,10 @@ def trouver_playlists_depuis_phrase(phrase):
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
- 
-        # Liste temporaire des genres que l'utilisateur aime (à remplacer par une vraie logique plus tard)
-        genres_utilisateur = [1, 2, 3]  # Par exemple : 1 = chill, 2 = motivant, 3 = relax
+
+        # Liste temporaire des genres que l'utilisateur aime (à remplacer plus tard)
+        genres_utilisateur = [1, 2, 3]  # Chill, Motivant, Relax
+        mot_cle_valide_trouve = False
 
         for mot in mots_cles:
             # 1. Trouver l'id du mot-clé
@@ -39,6 +40,7 @@ def trouver_playlists_depuis_phrase(phrase):
             print(f"🔎 Mot '{mot}' → id_mot_cle trouvé : {result}")
             if not result:
                 continue
+            mot_cle_valide_trouve = True
             id_mot_cle = result[0]
 
             # 2. Trouver les associations liées à ce mot-clé
@@ -57,8 +59,12 @@ def trouver_playlists_depuis_phrase(phrase):
                 cursor.execute("SELECT uri FROM playlist WHERE id_association = ?", (id_association,))
                 found_uris = [row[0] for row in cursor.fetchall()]
                 print(f"🎧 URIs trouvées pour association {id_association} : {found_uris}")
-
                 uris.extend(found_uris)
+
+        # ✅ Ici après la boucle
+        if not mot_cle_valide_trouve:
+            print("⚠️ Aucun mot-clé reconnu dans la base.")
+            return ["spotify:playlist:5gcRNWl6qZOW5Zevr9y2e6"]
 
     except sqlite3.Error as e:
         print(f"❌ Erreur de base de données: {e}")

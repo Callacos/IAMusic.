@@ -6,12 +6,15 @@ from spotify import jouer_playlist
 import os
 import sqlite3
 import time
+import requests
 from werkzeug.security import generate_password_hash
 from werkzeug.security import check_password_hash
 from utils import get_valid_spotify_token, sp_oauth, get_spotify_profile
 import spotipy
 from utils import get_valid_spotify_token
 from utils import get_spotify_oauth_for_user
+from recommande import get_playlist_from_phrase
+
 
 
 def get_db_connection():
@@ -42,8 +45,10 @@ def index():
         print("🎧 Utilisateur Spotify :", display_name, "-", spotify_id, "-", product)
     else:
         print("⚠️ Aucun profil Spotify connecté ou token invalide.")
+        display_name = "Utilisateur"
 
-    return render_template('index.html')
+
+    return render_template('index.html', display_name=display_name)
 
 
 
@@ -60,7 +65,18 @@ def recevoir_phrase():
     data = request.get_json()
     phrase = data.get('phrase')
 
-    uris = trouver_playlists_depuis_phrase(phrase)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (session["user_id"],))
+    utilisateur = cursor.fetchone()
+    conn.close()
+
+    if utilisateur:
+        user_id = utilisateur[0]
+        uris = get_playlist_from_phrase(user_id, phrase)
+    else:
+        return "❌ Utilisateur non trouvé"
+
 
     if uris:
         jouer_playlist(uris[0])  # Lecture automatique si URI trouvée
@@ -368,6 +384,25 @@ def devices():
         return "❌ Aucun appareil détecté"
     
     return "<br>".join([f"✅ {d['name']} - type: {d['type']}" for d in devices])
+
+
+def get_spotify_user_name():
+    access_token = session.get('access_token')
+    if not access_token:
+        return None
+
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+
+    response = requests.get("https://api.spotify.com/v1/me", headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data.get("display_name")  # ou data["id"] si pas de nom public
+    else:
+        print("⚠️ Impossible de récupérer les infos Spotify :", response.text)
+        return None
 
 
 
