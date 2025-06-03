@@ -147,3 +147,18 @@ a:hover {
     padding: 5px 10px;
     border-radius: 8px;
 }
+/* supprimé compte*/
+.dropdown-delete {
+    background: none;
+    border: none;
+    color: red;
+    padding: 8px 16px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.dropdown-delete:hover {
+    background-color: #f2f2f2;
+}
