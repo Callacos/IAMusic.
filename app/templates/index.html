@@ -3,11 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IAMusic 🎶</title>
+  <title>IAMusic</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
 </head>
 <body>
+<div class="page-wrapper">
+  <div class="logo-container">
+    <img src="{{ url_for('static', filename='image/logo.png') }}" alt="IAMusic Logo" class="iamusic-logo" />
+    <div class="logo-reflet"></div>
+  </div>
   <main>
     <h1>Quelle est ton humeur ?</h1>
     <form id="phraseForm">
