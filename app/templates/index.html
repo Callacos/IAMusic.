@@ -81,5 +81,134 @@
   }
 </script>
 
+
+<!-- 🎧 Mini lecteur Spotify -->
+<section class="spotify-player">
+  <div id="track-info">
+    <img id="album-cover" src="" alt="Album" />
+    <div>
+      <div id="track-name">Titre</div>
+      <div id="track-artist">Artiste</div>
+    </div>
+  </div>
+  <div id="controls">
+    <button onclick="previousTrack()">⏮️</button>
+    <button onclick="togglePlay()">⏯️</button>
+    <button onclick="nextTrack()">⏭️</button>
+  </div>
+  <input type="range" id="progress-bar" value="0" min="0" max="100" />
+</section>
+
+
+
+ <!--artiste de la semaine -->
+{% if artiste %}
+<section class="artiste-semaine">
+  <h2>🎤 Artiste de la semaine</h2>
+  <div class="artiste-contenu">
+    <img src="{{ artiste.image }}" alt="{{ artiste.nom }}" class="artiste-img">
+    <div class="artiste-nom">{{ artiste.nom }}</div>
+    <div class="artiste-info">
+      <div class="titres-albums">
+        <div class="titres">
+          <h4>Titres populaires</h4>
+          <ul>
+            {% for titre in artiste.titres %}
+              <li><a href="https://open.spotify.com/track/{{ titre.uri | replace('spotify:track:', '') }}" target="_blank">{{ titre.nom }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="albums">
+          <h4>Albums</h4>
+          <ul>
+            {% for album in artiste.albums %}
+              <li>
+            <a href="https://open.spotify.com/album/{{ album.uri | replace('spotify:album:', '') }}" target="_blank">
+            <img src="{{ album.image }}" alt="{{ album.nom }}" class="album-cover">
+           <span>{{ album.nom }}</span>
+            </a>
+          </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<script>
+let deviceId = null;
+let player = null;
+
+window.onSpotifyWebPlaybackSDKReady = () => {
+const token = "{{ spotify_token }}";
+  player = new Spotify.Player({
+    name: 'IAMusic Web Player',
+    getOAuthToken: cb => { cb(token); },
+    volume: 0.8
+  });
+
+  player.addListener('ready', ({ device_id }) => {
+    deviceId = device_id;
+    console.log('Appareil prêt :', device_id);
+    // Active automatiquement ce device
+    fetch("https://api.spotify.com/v1/me/player", {
+      method: "PUT",
+      body: JSON.stringify({ device_ids: [deviceId], play: true }),
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+  });
+
+  player.addListener('player_state_changed', state => {
+    if (!state) return;
+    document.getElementById("track-name").innerText = state.track_window.current_track.name;
+    document.getElementById("track-artist").innerText = state.track_window.current_track.artists.map(a => a.name).join(", ");
+    document.getElementById("album-cover").src = state.track_window.current_track.album.images[0].url;
+    document.getElementById("progress-bar").value = (state.position / state.duration) * 100;
+  });
+
+  player.connect();
+};
+ setInterval(() => {
+    if (player) {
+      player.getCurrentState().then(state => {
+        if (!state) return;
+        const progress = state.position;
+        const duration = state.duration;
+        const progressBar = document.getElementById('progress-bar');
+        if (progressBar) {
+          progressBar.value = (progress / duration) * 100;
+        }
+      });
+    }
+  }, 1000);
+
+const progressBar = document.getElementById('progress-bar');
+  progressBar.addEventListener('input', (e) => {
+    player.getCurrentState().then(state => {
+      if (!state) return;
+      const newPos = (e.target.value / 100) * state.duration;
+      player.seek(newPos);
+    });
+  });
+
+
+function togglePlay() {
+  player.togglePlay();
+}
+function nextTrack() {
+  player.nextTrack();
+}
+function previousTrack() {
+  player.previousTrack();
+}
+</script>
+
+<script src="https://sdk.scdn.co/spotify-player.js"></script>
+
 </body>
 </html>

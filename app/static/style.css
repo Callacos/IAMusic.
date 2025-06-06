@@ -19,7 +19,7 @@ body {
 }
 
 .iamusic-logo {
-  width: 100px;   /* ✅ Change cette valeur comme tu veux */
+  width: 5em;   /* ✅ Change cette valeur comme tu veux */
   max-width: 100%;
   height: auto;
   display: block;
@@ -29,9 +29,10 @@ body {
 
 .logo-container {
   position: relative;
-  max-width: 500px;
+  max-width: 30em;
   width: 100%;
   margin-bottom: 2em;
+  margin-top: 2em;
   display: flex;
   justify-content: center;
   overflow: hidden;   /* <- C'est ça qui bloque le débordement */
@@ -225,4 +226,219 @@ a:hover {
 
 .dropdown-delete:hover {
     background-color: #f2f2f2;
+}
+
+/*artiste de la semaine*/
+.artist-of-week {
+  margin-top: 3em;
+  text-align: center;
+}
+
+.artist-block {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  background-color: #121212;
+  padding: 2em;
+  border-radius: 1em;
+  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+  margin-top: 1em;
+  gap: 2em;
+  flex-wrap: wrap;
+}
+
+.artist-image img {
+  width: 150px;
+  height: 150px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.artist-titles,
+.artist-albums {
+  flex: 1;
+  text-align: left;
+  color: #fff;
+}
+
+.artist-titles h3,
+.artist-albums h3 {
+  margin-bottom: 0.5em;
+  color: #1db954;
+}
+
+.artist-titles ul,
+.artist-albums ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.artist-titles li,
+.artist-albums li {
+  padding: 0.3em 0;
+  border-bottom: 1px solid #333;
+}
+/* artiste de la semaine */
+.artiste-semaine {
+  margin-top: 3em;
+  padding: 2em;
+  background-color: #121212;
+  border-radius: 1em;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.4);
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.artiste-img {
+  width: 300px;
+  max-width: 100%;
+  border-radius: 0.8em;
+  margin: 0 auto 1.5em;
+  display: block;
+}
+
+.artiste-nom {
+  font-size: 1.3em;
+  font-weight: bold;
+  margin: 0.5em 0 1.5em;
+  color: white;
+  text-align: center;
+}
+
+
+.artiste-info {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2em;
+  text-align: left;
+}
+
+.titres, .albums {
+  flex: 1;
+  min-width: 200px;
+}
+
+.titres h4,
+.albums h4 {
+  margin-bottom: 0.5em;
+  color: #1db954;
+}
+
+.titres ul,
+.albums ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.titres li,
+.albums li {
+  margin-bottom: 0.5em;
+}
+
+.titres a,
+.albums a {
+  color: #fff;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.titres a:hover,
+.albums a:hover {
+  color: #1db954;
+}
+
+.album-cover {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.albums li {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+
+/* ✅ Rendre l’image de l’artiste responsive */
+.artiste-img {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+}
+
+/* ✅ Layout mobile-friendly */
+@media (max-width: 768px) {
+  .artiste-contenu {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .titres-albums {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .albums li,
+  .titres li {
+    justify-content: center;
+  }
+
+  .titres,
+  .albums {
+    width: 100%;
+  }
+}
+
+/*lecture musique */
+.spotify-player {
+  margin: 2em auto;
+  padding: 1em;
+  background-color: #181818;
+  border-radius: 12px;
+  max-width: 500px;
+  color: white;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+  text-align: center;
+}
+
+#track-info {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  margin-bottom: 1em;
+}
+
+#track-info img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+#controls button {
+  font-size: 1.2em;
+  background: none;
+  border: none;
+  color: white;
+  margin: 0 10px;
+  cursor: pointer;
+}
+
+#controls button:hover {
+  color: #1db954;
+}
+
+#progress-bar {
+  width: 85%;
+  margin-top: 1em;
 }

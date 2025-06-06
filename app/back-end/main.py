@@ -1,12 +1,15 @@
 from flask import Flask, request, send_from_directory, render_template_string
 from flask import render_template
 from flask import session, redirect, url_for
+from flask import redirect, url_for, session, flash
 from ia import trouver_playlists_depuis_phrase
 from spotify import jouer_playlist
+import spotipy
 import os
 import sqlite3
 import time
 import requests
+import json
 from werkzeug.security import generate_password_hash
 from werkzeug.security import check_password_hash
 from utils import get_valid_spotify_token, sp_oauth, get_spotify_profile
@@ -14,9 +17,28 @@ import spotipy
 from utils import get_valid_spotify_token
 from utils import get_spotify_oauth_for_user
 from recommande import get_playlist_from_phrase
+from auten import get_current_playback_info
+from auten import get_spotify_for_user
+from auten import sp
 
+def get_valid_spotify_token():
+    nom_utilisateur = session.get('user_id')
+    if not nom_utilisateur:
+        print("❌ Aucun utilisateur en session.")
+        return None
 
+    sp_oauth = get_spotify_oauth_for_user(nom_utilisateur)
+    token_info = sp_oauth.get_cached_token()
 
+    if not token_info:
+        print("❌ Aucun token trouvé pour", nom_utilisateur)
+        return None
+
+    if sp_oauth.is_token_expired(token_info):
+        print("🔁 Token expiré, tentative de rafraîchissement...")
+        token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
+
+    return token_info['access_token']
 def get_db_connection():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database'))
     db_path = os.path.join(base_dir, 'music.db')
@@ -43,12 +65,39 @@ def index():
         product = profile.get('product', 'inconnu')
 
         print("🎧 Utilisateur Spotify :", display_name, "-", spotify_id, "-", product)
+
+        # 🔁 Utiliser le cache existant pour récupérer le player
+        sp_local = get_spotify_for_user(spotify_id)
+        playback = sp_local.current_playback()
+
+        player_info = None
+        if playback and playback.get('item'):
+            item = playback['item']
+            player_info = {
+                'titre': item['name'],
+                'artiste': item['artists'][0]['name'],
+                'image': item['album']['images'][0]['url'],
+                'is_playing': playback['is_playing']
+            }
     else:
-        print("⚠️ Aucun profil Spotify connecté ou token invalide.")
         display_name = "Utilisateur"
+        player_info = None
 
+    # Charger l'artiste de la semaine
+    artiste_path = os.path.join(os.path.dirname(__file__), "artiste_semaine.json")
+    try:
+        with open(artiste_path, "r") as f:
+            artiste = json.load(f)
+    except:
+        artiste = None
 
-    return render_template('index.html', display_name=display_name)
+    
+    token = get_valid_spotify_token()
+    if not token:
+     return "❌ Erreur d'authentification Spotify", 403
+
+    return render_template("index.html", display_name=display_name, artiste=artiste, spotify_token=token)
+
 
 
 
@@ -403,6 +452,65 @@ def get_spotify_user_name():
     else:
         print("⚠️ Impossible de récupérer les infos Spotify :", response.text)
         return None
+    
+# delete user 
+def supprimer_utilisateur(id_utilisateur):
+    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../database/music.db"))
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("DELETE FROM gout_utilisateur WHERE id_utilisateur = ?", (id_utilisateur,))
+        print("🗑️ Suppression gout_utilisateur :", cursor.rowcount)
+
+        cursor.execute("DELETE FROM utilisateur WHERE id_utilisateur = ?", (id_utilisateur,))
+        print("🗑️ Suppression utilisateur :", cursor.rowcount)
+
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"❌ Erreur suppression : {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+@app.route('/delete_account', methods=['POST'])
+def delete_account():
+    user_name = session.get('user_id')
+    print(f"👤 Tentative de suppression pour : {user_name}")
+
+    if not user_name:
+        flash("Aucun utilisateur connecté.")
+        return redirect(url_for('index'))
+
+    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../database/music.db"))
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_name,))
+        result = cursor.fetchone()
+        print("🔍 Résultat SELECT :", result)
+
+        if result:
+            id_utilisateur = result[0]
+            if supprimer_utilisateur(id_utilisateur):
+                session.clear()
+                flash("✅ Compte supprimé.")
+            else:
+                flash("❌ Échec suppression.")
+        else:
+            flash("❌ Utilisateur non trouvé.")
+    except sqlite3.Error as e:
+        flash(f"❌ Erreur DB : {e}")
+    finally:
+        conn.close()
+
+    return redirect(url_for('login'))
+
 
 
 
