@@ -19,6 +19,7 @@ from utils import get_spotify_oauth_for_user
 from recommande import get_playlist_from_phrase
 from auten import get_current_playback_info
 from auten import get_spotify_for_user
+from flask import jsonify
 
 def get_valid_spotify_token():
     nom_utilisateur = session.get('user_id')
@@ -220,17 +221,13 @@ def spotify_login():
     if not nom:
         return redirect(url_for('login'))
 
-    # 🔄 Supprime tous les fichiers .cache-* (même celui du user actuel)
-    for f in os.listdir():
-        if f.startswith(".cache"):
-            os.remove(f)
-
     # 🔐 Crée une nouvelle instance OAuth propre pour ce user
     sp_oauth = get_spotify_oauth_for_user(nom)
     auth_url = sp_oauth.get_authorize_url()
 
     # 🚀 Redirige vers l'authentification Spotify
     return redirect(auth_url)
+
 
 
 @app.route('/callback')
@@ -495,6 +492,41 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# Table pour stocker les playlists en vedette
+    # Sélectionner une playlist aléatoire
+@app.route('/get-random-featured-playlist')
+def get_random_featured_playlist():
+    """Retourne une playlist aléatoire parmi celles en vedette"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Récupérer toutes les playlists en vedette
+        cursor.execute("SELECT uri, titre FROM featured_playlists")
+        playlists = cursor.fetchall()
+        conn.close()
+        
+        if not playlists:
+            # Playlist par défaut si aucune n'est configurée
+            return jsonify({
+                "uri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+                "name": "Today's Top Hits"
+            })
+        
+        # Sélectionner une playlist aléatoire
+        import random
+        playlist = random.choice(playlists)
+        
+        return jsonify({
+            "uri": playlist[0],
+            "name": playlist[1]
+        })
+    except Exception as e:
+        print(f"Erreur lors de la récupération d'une playlist aléatoire: {e}")
+        return jsonify({
+            "uri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+            "name": "Today's Top Hits"
+        })
 
 
 

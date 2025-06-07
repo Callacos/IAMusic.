@@ -401,8 +401,8 @@ a:hover {
 
 /*lecture musique */
 .spotify-player {
-  margin: 2em auto;
-  padding: 1em;
+  margin: 3em auto;
+  padding: 5em;
   background-color: #181818;
   border-radius: 12px;
   max-width: 500px;
@@ -441,4 +441,180 @@ a:hover {
 #progress-bar {
   width: 85%;
   margin-top: 1em;
+}
+
+/* ── Lecture Spotify : forcer l’horizontal et empêcher le wrapping ── */
+.spotify-player #controls {
+  display: flex;           /* passe en flexbox */
+  justify-content: center; /* centre horizontalement */
+  align-items: center;     /* centre verticalement */
+  gap: 1em;                /* espace entre les boutons */
+  flex-wrap: nowrap;       /* interdit le retour à la ligne */
+}
+
+.spotify-player #controls button {
+  margin: 0;               /* enlève toute marge verticale résiduelle */
+}
+
+/* ── Titre et artiste : garder sur une seule ligne ── */
+.spotify-player #track-info > div > div {
+  white-space: nowrap;     /* pas de retour à la ligne automatique */
+  overflow: hidden;        /* cache le dépassement */
+  text-overflow: ellipsis; /* ajoute "…" si c’est trop long */
+}
+
+/* ── Fix block “Quelle est ton humeur ?” ── */
+main {
+  /* on lui donne un peu d’air en bas pour ne pas coller au section suivantes */
+  margin-bottom: 3em;
+  /* on s’assure qu’il reste centré et responsive */
+  max-width: 400px;
+  width: 90%;
+  min-width: 300px;
+  box-sizing: border-box;
+}
+
+main form input,
+main form button {
+  /* input + bouton plein largeur de la boîte main */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* si tu veux plus d’espace entre l’input et le bouton */
+main form {
+  gap: 1.5em;
+}
+
+
+/* Styles pour le footer */
+.site-footer {
+  background-color: #121212;
+  color: #ffffff;
+  padding: 40px 20px 20px;
+  margin-top: 60px;
+  border-top: 1px solid #333;
+}
+
+.footer-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 30px;
+}
+
+.footer-logo {
+  flex: 1;
+  min-width: 200px;
+}
+
+.footer-logo-img {
+  max-width: 150px;
+  height: auto;
+}
+
+.footer-nav, .footer-social {
+  flex: 1;
+  min-width: 200px;
+}
+
+.footer-nav h3, .footer-social h3 {
+  color: #1DB954;
+  margin-bottom: 15px;
+  font-size: 18px;
+}
+
+.footer-nav ul {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-nav ul li {
+  margin-bottom: 10px;
+}
+
+.footer-nav ul li a {
+  color: #ffffff;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-nav ul li a:hover {
+  color: #1DB954;
+}
+
+.social-icons {
+  display: flex;
+  gap: 15px;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #333;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.social-icon:hover {
+  background-color: #1DB954;
+  transform: translateY(-3px);
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #333;
+  font-size: 14px;
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .footer-container {
+    flex-direction: column;
+  }
+  
+  .footer-logo, .footer-nav, .footer-social {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .social-icons {
+    justify-content: center;
+  }
+}
+
+/*logo cliquable*/
+/* Animation pour le logo quand on clique dessus */
+.pulse {
+  animation: pulse-animation 0.5s;
+}
+
+@keyframes pulse-animation {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Rendre le logo plus clairement cliquable */
+.logo-container {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.logo-container:hover {
+  transform: scale(1.05);
 }
