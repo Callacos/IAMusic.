@@ -157,9 +157,12 @@
 <script>
 let deviceId = null;
 let player = null;
+let lastReconnectAttempt = 0;
+let userActive = true; // Nouvelle variable pour suivre l'activité
+let checkInterval;
 
 window.onSpotifyWebPlaybackSDKReady = () => {
-const token = "{{ spotify_token }}";
+  const token = "{{ spotify_token }}";
   player = new Spotify.Player({
     name: 'IAMusic Web Player',
     getOAuthToken: cb => { cb(token); },
@@ -188,41 +191,162 @@ const token = "{{ spotify_token }}";
     document.getElementById("progress-bar").value = (state.position / state.duration) * 100;
   });
 
+
   player.connect();
 };
- setInterval(() => {
-    if (player) {
-      player.getCurrentState().then(state => {
-        if (!state) return;
-        const progress = state.position;
-        const duration = state.duration;
-        const progressBar = document.getElementById('progress-bar');
-        if (progressBar) {
-          progressBar.value = (progress / duration) * 100;
-        }
-      });
-    }
-  }, 1000);
 
+// Détection de l'activité utilisateur
+document.addEventListener('mousemove', () => userActive = true);
+document.addEventListener('keypress', () => userActive = true);
+document.addEventListener('click', () => userActive = true);
+
+// Gérer la visibilité de la page
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    // Ne pas vérifier si la page est inactive
+    console.log("Page inactive - arrêt des vérifications automatiques");
+    clearInterval(checkInterval);
+  } else {
+    // Reprendre les vérifications quand la page est visible
+    console.log("Page active - reprise des vérifications");
+    startConditionalChecks();
+  }
+});
+
+// Démarrer les vérifications conditionnelles
+startConditionalChecks();
+
+
+// Fonction pour démarrer les vérifications conditionnelles
+function startConditionalChecks() {
+  // Arrêter l'intervalle existant s'il y en a un
+  if (checkInterval) clearInterval(checkInterval);
+  
+  // Créer un nouvel intervalle qui vérifie uniquement si l'utilisateur est actif
+  checkInterval = setInterval(() => {
+    if (userActive) {
+      // L'utilisateur a été actif, vérifier le player
+      console.log("Vérification du player (utilisateur actif)");
+      if (player) {
+        const now = Date.now();
+        player.getCurrentState().then(state => {
+          if (!state && (now - lastReconnectAttempt > 60000)) {
+            console.log("Player déconnecté - tentative de reconnexion");
+            lastReconnectAttempt = now;
+            player.connect().then(success => {
+              if (success) {
+                console.log("Reconnexion du player réussie");
+              }
+            });
+          }
+        }).catch(error => {
+          console.error("Erreur lors de la vérification de l'état:", error);
+        });
+      }
+      userActive = false; // Réinitialiser jusqu'au prochain mouvement
+    } else {
+      console.log("Utilisateur inactif - pas de vérification");
+    }
+  }, 180000); // 3 minutes
+}
+
+// Fonction robuste pour vérifier l'état du player et tenter une reconnexion si nécessaire
+function checkPlayerStatus() {
+  if (player) {
+    const now = Date.now();
+    player.getCurrentState().then(state => {
+      if (!state && (now - lastReconnectAttempt > 60000)) {
+        console.log("Player déconnecté - tentative de reconnexion");
+        lastReconnectAttempt = now;
+        player.connect().then(success => {
+          if (success) {
+            console.log("Reconnexion du player réussie");
+          }
+        });
+      }
+    }).catch(error => {
+      console.error("Erreur lors de la vérification de l'état:", error);
+    });
+  }
+}
+
+// Fonction robuste pour le bouton play/pause
+function togglePlay() {
+  if (player) {
+    player.getCurrentState().then(state => {
+      if (!state) {
+        console.log("État du player inaccessible - tentative de reconnexion");
+        player.connect();
+        return;
+      }
+      player.togglePlay();
+    }).catch(error => {
+      console.error("Erreur lors du toggle play:", error);
+      player.connect();
+    });
+  }
+}
+
+// Fonction robuste pour passer à la piste suivante
+function nextTrack() {
+  if (player) {
+    player.getCurrentState().then(state => {
+      if (!state) {
+        console.log("État du player inaccessible - tentative de reconnexion");
+        player.connect();
+        return;
+      }
+      player.nextTrack();
+    }).catch(error => {
+      console.error("Erreur lors du next track:", error);
+      player.connect();
+    });
+  }
+}
+
+// Fonction robuste pour revenir à la piste précédente
+function previousTrack() {
+  if (player) {
+    player.getCurrentState().then(state => {
+      if (!state) {
+        console.log("État du player inaccessible - tentative de reconnexion");
+        player.connect();
+        return;
+      }
+      player.previousTrack();
+    }).catch(error => {
+      console.error("Erreur lors du previous track:", error);
+      player.connect();
+    });
+  }
+}
+
+// Mise à jour de la barre de progression toutes les secondes
+setInterval(() => {
+  if (player) {
+    player.getCurrentState().then(state => {
+      if (!state) return;
+      const progress = state.position;
+      const duration = state.duration;
+      const progressBar = document.getElementById('progress-bar');
+      if (progressBar) {
+        progressBar.value = (progress / duration) * 100;
+      }
+    });
+  }
+}, 1000);
+
+// Gestion du changement manuel de la position de lecture
 const progressBar = document.getElementById('progress-bar');
-  progressBar.addEventListener('input', (e) => {
+progressBar.addEventListener('input', (e) => {
+  if (player) {
     player.getCurrentState().then(state => {
       if (!state) return;
       const newPos = (e.target.value / 100) * state.duration;
       player.seek(newPos);
     });
-  });
-
-
-function togglePlay() {
-  player.togglePlay();
-}
-function nextTrack() {
-  player.nextTrack();
-}
-function previousTrack() {
-  player.previousTrack();
-}
+  }
+});
 </script>
 
 <script src="https://sdk.scdn.co/spotify-player.js"></script>

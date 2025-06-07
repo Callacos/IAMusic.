@@ -402,27 +402,33 @@ a:hover {
 /*lecture musique */
 .spotify-player {
   margin: 3em auto;
-  padding: 5em;
+  padding: 2em;
   background-color: #181818;
   border-radius: 12px;
   max-width: 500px;
+  width: 90%; 
   color: white;
   box-shadow: 0 0 8px rgba(0,0,0,0.5);
   text-align: center;
+  box-sizing: border-box;
+  overflow: hidden; /* Empêcher tout débordement */
 }
-
 #track-info {
   display: flex;
   align-items: center;
   gap: 1em;
   margin-bottom: 1em;
+  max-width: 100%; /* Important pour limiter la largeur */
+  overflow: hidden; /* Critique pour empêcher le débordement */
 }
+
 
 #track-info img {
   width: 64px;
   height: 64px;
   object-fit: cover;
   border-radius: 6px;
+  flex-shrink: 0; /* Empêche l'image de se rétrécir */
 }
 
 #controls button {
@@ -617,4 +623,55 @@ main form {
 
 .logo-container:hover {
   transform: scale(1.05);
+}
+
+/* Gérer les titres trop longs dans le lecteur Spotify */
+#track-name, #track-artist {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* Ajustez cette valeur selon vos besoins */
+}
+
+/* Ajuster la taille du conteneur d'informations */
+#track-info > div {
+  flex: 1;
+  min-width: 0; /* Important pour que l'ellipsis fonctionne correctement */
+  width: 100%;
+  overflow: hidden; 
+}
+
+/* S'assurer que le conteneur d'infos est responsive */
+#track-info {
+  width: 100%;
+  flex-wrap: nowrap;
+}
+
+/* Sur mobile, adapter la disposition */
+@media (max-width: 480px) {
+  #track-info {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  #track-name, #track-artist {
+    max-width: 100%;
+    width: 100%;
+    font-size: 0.9em;
+    text-align: center;
+  }
+  
+  #album-cover {
+    margin-bottom: 10px;
+  }
+}
+
+.spotify-player {
+  overflow-x: hidden; /* Assure qu'aucun contenu ne déborde horizontalement */
+}
+
+body, html {
+  overflow-x: hidden; /* Empêche le défilement horizontal sur toute la page */
+  max-width: 100%;
 }
