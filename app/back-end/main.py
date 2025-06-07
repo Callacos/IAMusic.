@@ -19,7 +19,6 @@ from utils import get_spotify_oauth_for_user
 from recommande import get_playlist_from_phrase
 from auten import get_current_playback_info
 from auten import get_spotify_for_user
-from auten import sp
 
 def get_valid_spotify_token():
     nom_utilisateur = session.get('user_id')
@@ -39,6 +38,7 @@ def get_valid_spotify_token():
         token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
 
     return token_info['access_token']
+
 def get_db_connection():
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database'))
     db_path = os.path.join(base_dir, 'music.db')
@@ -58,19 +58,23 @@ def index():
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    profile = get_spotify_profile()
-    if profile:
-        display_name = profile.get('display_name', 'Inconnu')
-        spotify_id = profile.get('id', 'Inconnu')
-        product = profile.get('product', 'inconnu')
+    # 1) On lit a_choisi_gouts depuis la table utilisateur
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT a_choisi_gouts FROM utilisateur WHERE nom = ?", (session['user_id'],))
+    row = cursor.fetchone()
+    conn.close()
 
-        print("🎧 Utilisateur Spotify :", display_name, "-", spotify_id, "-", product)
+    # 2) S’il n’a pas encore coché ses goûts (valeur 0), on redirige vers /preferences
+    if not row or row[0] == 0:
+        return redirect(url_for('preferences'))
 
-        # 🔁 Utiliser le cache existant pour récupérer le player
-        sp_local = get_spotify_for_user(spotify_id)
+    # 3) Sinon, on affiche l’accueil “normal” :
+    display_name = session.get('spotify_display_name', 'Utilisateur')
+    player_info = None
+    try:
+        sp_local = get_spotify_for_user(session['user_id'])
         playback = sp_local.current_playback()
-
-        player_info = None
         if playback and playback.get('item'):
             item = playback['item']
             player_info = {
@@ -79,25 +83,29 @@ def index():
                 'image': item['album']['images'][0]['url'],
                 'is_playing': playback['is_playing']
             }
-    else:
-        display_name = "Utilisateur"
-        player_info = None
+    except Exception as e:
+        print("⚠️ Impossible de récupérer le playback :", e)
 
-    # Charger l'artiste de la semaine
+    # Charger l’artiste de la semaine
+    artiste = None
     artiste_path = os.path.join(os.path.dirname(__file__), "artiste_semaine.json")
     try:
         with open(artiste_path, "r") as f:
             artiste = json.load(f)
     except:
-        artiste = None
+        pass
 
-    
     token = get_valid_spotify_token()
     if not token:
-     return "❌ Erreur d'authentification Spotify", 403
+        return "❌ Erreur d'authentification Spotify", 403
 
-    return render_template("index.html", display_name=display_name, artiste=artiste, spotify_token=token)
-
+    return render_template(
+        "index.html",
+        display_name=display_name,
+        artiste=artiste,
+        player_info=player_info,
+        spotify_token=token
+    )
 
 
 
@@ -231,23 +239,15 @@ def callback():
     if not nom:
         return redirect(url_for('login'))
 
-    # On crée l'objet OAuth lié à ce nom
     sp_oauth = get_spotify_oauth_for_user(nom)
-
-    # Récupération du code renvoyé par Spotify
     code = request.args.get('code')
     token_info = sp_oauth.get_access_token(code)
 
-    # 💾 Enregistrement des tokens en base de données
-    from utils import save_spotify_tokens  # ajuste le chemin selon ton organisation
+    from utils import save_spotify_tokens
     save_spotify_tokens(nom, token_info)
 
-    # Connexion à Spotify avec le token
     sp = spotipy.Spotify(auth=token_info['access_token'])
-
-    # Récupération du profil utilisateur
     profile = sp.current_user()
-    print("🧪 PROFIL COMPLET RENVOYÉ PAR SPOTIFY :", profile)
 
     display_name = profile.get('display_name', 'Inconnu')
     spotify_id = profile.get('id', 'Inconnu')
@@ -255,19 +255,16 @@ def callback():
 
     print("🎧 Spotify connecté :", display_name, "-", spotify_id, "-", product)
 
-    # Si ce n'est pas un compte premium → on bloque
     if product != 'premium':
-        print("❌ COMPTE GRATUIT BLOQUÉ :", spotify_id)
-        return render_template(
-            "spotify_error.html",
-            message="Ce compte Spotify n'est pas Premium. IAMusic nécessite un compte Premium pour fonctionner."
-        )
+        return render_template("spotify_error.html", message="Compte non premium")
 
-    # Stockage du type dans session (facultatif mais utile pour ton app)
     session['spotify_type'] = product
     session['spotify_display_name'] = display_name
 
-    return redirect(url_for('preferences'))
+    # Redirection vers l’accueil, et non /preferences
+    return redirect(url_for('index'))
+
+
 
 
 
@@ -329,9 +326,7 @@ def connexion():
             nom_en_db, mot_de_passe_hash = utilisateur
             if check_password_hash(mot_de_passe_hash, mot_de_passe):
                 session['user_id'] = nom_en_db
-                session['first_login'] = False  # car il s’est déjà connecté
                 return redirect(url_for('spotify_login'))
-
             else:
                 message = "Mot de passe incorrect."
         else:
@@ -339,10 +334,6 @@ def connexion():
 
     return render_template('connexion.html', message=message)
 
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login'))
 
 
 
@@ -353,50 +344,36 @@ def preferences():
         return redirect(url_for('login'))
 
     if request.method == 'POST':
-        gouts = request.form.getlist('genres')  # <input name="genres" ...>
+        gouts = request.form.getlist('genres')  # Les IDs des goûts cochés
         nom_utilisateur = session['user_id']
-
-        print("Genres sélectionnés :", gouts)
-        print("Nom d'utilisateur :", nom_utilisateur)
 
         conn = get_db_connection()
         try:
             cursor = conn.cursor()
-
-            # Récupère l'id de l'utilisateur à partir du nom
+            # Récupère l’id de l’utilisateur
             cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (nom_utilisateur,))
             utilisateur = cursor.fetchone()
-            print("Résultat SELECT utilisateur :", utilisateur)
-            # Si l'utilisateur existe, on récupère son id
 
             if utilisateur:
                 utilisateur_id = utilisateur[0]
-
-                # Insère chaque goût sélectionné dans la table pivot
+                # Insère chaque goût dans la table pivot
                 for id_gout in gouts:
-                    cursor.execute('''
-                        INSERT INTO gout_utilisateur (id_utilisateur, id_gout)
-                        VALUES (?, ?)
-                    ''', (utilisateur_id, id_gout))
-
-                # Met à jour le champ a_choisi_gouts
-                cursor.execute('''
-                    UPDATE utilisateur SET a_choisi_gouts = 1 WHERE id_utilisateur = ?
-                ''', (utilisateur_id,))
-
+                    cursor.execute(
+                        "INSERT INTO gout_utilisateur (id_utilisateur, id_gout) VALUES (?, ?)",
+                        (utilisateur_id, id_gout)
+                    )
+                # Marque en base que l’utilisateur a choisi ses goûts
+                cursor.execute(
+                    "UPDATE utilisateur SET a_choisi_gouts = 1 WHERE id_utilisateur = ?",
+                    (utilisateur_id,)
+                )
                 conn.commit()
-
         finally:
             conn.close()
 
-        session['first_login'] = False
         return redirect(url_for('index'))
 
-    # Si l'utilisateur a déjà choisi ses goûts, il va à l'accueil directement
-    if not session.get('first_login'):
-        return redirect(url_for('index'))
-
-    # Affiche les goûts disponibles depuis la table `gout`
+    # Affiche simplement la page pour cocher les goûts
     conn = get_db_connection()
     try:
         cursor = conn.cursor()
@@ -513,7 +490,10 @@ def delete_account():
 
 
 
-
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 
 
