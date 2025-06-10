@@ -1,0 +1,2 @@
+exmple de uri
+music: spotify:track:5NiKdj69Uqqe34wgtj8h9T

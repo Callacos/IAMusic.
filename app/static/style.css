@@ -444,10 +444,117 @@ a:hover {
   color: #1db954;
 }
 
-#progress-bar {
-  width: 85%;
-  margin-top: 1em;
+:root {
+  --spotify-green: #1DB954;
+  --track-bg:    #333;
+  --fill-bg:     #302e2e94;
+  --thumb-size:  12px;
 }
+
+#progress-bar {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90%;
+  height: 6px;
+  margin: 15px auto;
+  background: var(--fill-bg);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  transition: height 0.2s;
+}
+
+/* agrandit légèrement la barre au survol */
+#progress-bar:hover {
+  height: 8px;
+}
+
+/* ===== WebKit (Chrome, Safari) ===== */
+#progress-bar::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 100%;
+  background: var(--fill-bg);
+  border-radius: 3px;
+}
+
+#progress-bar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--thumb-size);
+  height: var(--thumb-size);
+  margin-top: calc((6px - var(--thumb-size)) / 2);
+  background: var(--spotify-green);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#progress-bar:hover::-webkit-slider-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Firefox ===== */
+#progress-bar::-moz-range-track {
+  height: 100%;
+  background: var(--fill-bg);
+  border-radius: 3px;
+}
+
+#progress-bar::-moz-range-progress {
+  background: var(--spotify-green);
+  height: 100%;
+  border-radius: 3px;
+}
+
+#progress-bar::-moz-range-thumb {
+  width: var(--thumb-size);
+  height: var(--thumb-size);
+  background: var(--spotify-green);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#progress-bar:hover::-moz-range-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Edge / IE ===== */
+#progress-bar::-ms-track {
+  width: 100%;
+  height: 6px;
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+}
+
+#progress-bar::-ms-fill-lower {
+  background: var(--spotify-green);
+  border-radius: 3px;
+}
+
+#progress-bar::-ms-fill-upper {
+  background: var(--fill-bg);
+  border-radius: 3px;
+}
+
+#progress-bar::-ms-thumb {
+  width: var(--thumb-size);
+  height: var(--thumb-size);
+  background: var(--spotify-green);
+  border-radius: 50%;
+  margin-top: 0; /* IE aligne déjà bien */
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#progress-bar:hover::-ms-thumb {
+  transform: scale(1.2);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
 
 /* ── Lecture Spotify : forcer l’horizontal et empêcher le wrapping ── */
 .spotify-player #controls {
@@ -674,4 +781,124 @@ main form {
 body, html {
   overflow-x: hidden; /* Empêche le défilement horizontal sur toute la page */
   max-width: 100%;
+}
+
+/* Styles pour les boutons du dropdown menu */
+.dropdown-delete,
+.dropdown-update,
+.dropdown-change-password,
+.dropdown-delete-history {
+  width: 100%;
+  text-align: left;
+  padding: 0.8em 1em;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9em;
+  border: none;
+  background: #1e1e1e;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 0.5em;
+  margin-bottom: 0.5em;
+  display: flex;
+  align-items: center;
+}
+
+/* Pseudo-éléments pour les icônes */
+.dropdown-update::before {
+  content: "👤";
+  margin-right: 8px;
+}
+
+.dropdown-change-password::before {
+  content: "🔑";
+  margin-right: 8px;
+}
+
+.dropdown-delete-history::before {
+  content: "🧹";
+  margin-right: 8px;
+}
+
+.dropdown-delete::before {
+  content: "🗑️";
+  margin-right: 8px;
+}
+
+/* Styles spécifiques pour les boutons */
+.dropdown-update:hover {
+  background-color: #333;
+  color: #1db954;
+  transform: translateX(3px);
+}
+
+.dropdown-change-password:hover {
+  background-color: #333;
+  color: #1db954;
+  transform: translateX(3px);
+}
+
+/* Style pour les boutons de suppression */
+.dropdown-delete,
+.dropdown-delete-history {
+  color: #ff5555;
+}
+
+.dropdown-delete:hover,
+.dropdown-delete-history:hover {
+  background-color: rgba(255, 85, 85, 0.2);
+  color: #ff3333;
+  transform: translateX(3px);
+}
+
+/* Style pour les formulaires dans le menu */
+.dropdown-content form {
+  margin: 0;
+  padding: 0.5em;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Adaptation pour mobile */
+@media (max-width: 480px) {
+  .dropdown-content {
+    min-width: 200px;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+  }
+  
+  .dropdown-delete,
+  .dropdown-update,
+  .dropdown-change-password,
+  .dropdown-delete-history {
+    font-size: 0.85em;
+    padding: 0.7em;
+  }
+  
+  .dropdown-content form {
+    padding: 0.3em;
+  }
+}
+
+/* Aspect visuel du dropdown */
+.dropdown-content {
+  background-color: #1a1a1a;
+  border: 1px solid #333;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  padding: 0.5em 0;
+  border-radius: 0.5em;
+}
+
+/* Animation d'ouverture */
+.dropdown-content.show {
+  animation: dropdownFadeIn 0.3s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

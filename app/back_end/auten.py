@@ -1,7 +1,15 @@
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
+from flask import session
 import os
+import sqlite3
+
+# Function to create a database connection
+def get_db_connection():
+    conn = sqlite3.connect('database.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
 # Charger les variables d'environnement à partir du fichier .env
 load_dotenv()
@@ -43,7 +51,34 @@ def jouer_playlist(uri, sp):
         sp.start_playback(context_uri=uri)
         print(f"Lecture lancée pour l'URI : {uri}")
     except Exception as e:
-        print(f"Erreur lors de la lecture de la playlist : {e}")
+        print(f"Erreur lors du lancement de la lecture: {e}")
+        return
+    # Enregistrer dans l'historique
+    user_id = session.get('user_id')
+    if user_id:
+        try:
+            # Récupérer les infos de la playlist
+            playlist_data = sp.playlist(uri.split(':')[-1])
+            playlist_nom = playlist_data.get('name', 'Playlist inconnue')
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Récupérer l'ID utilisateur
+            cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_id,))
+            result = cursor.fetchone()
+            if result:
+                id_utilisateur = result[0]
+                
+                # Enregistrer l'écoute
+                cursor.execute(
+                    "INSERT INTO historique_ecoute (id_utilisateur, playlist_uri, playlist_nom) VALUES (?, ?, ?)",
+                    (id_utilisateur, uri, playlist_nom)
+                )
+                conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Erreur lors de la lecture de la playlist : {e}")
 
 # Fonction pour récupérer la lecture actuelle
 def get_current_playback_info(sp):

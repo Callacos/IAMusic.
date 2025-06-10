@@ -1,0 +1,17 @@
+{
+  "nom": "Linkin Park",
+  "image": "https://i.scdn.co/image/ab6761610000e5eba49c7eec5131a21a0bfb737b",
+  "albums": [
+    {
+      "nom": "From Zero (Deluxe Edition)",
+      "uri": "spotify:album:5QfFvOMOJ0CrIDmu33RmSJ",
+      "image": "https://i.scdn.co/image/ab67616d0000b273a493a67f01bcfe65b23bc910"
+    }
+  ],
+  "titres": [
+    {
+      "nom": "in the end ",
+      "uri": "spotify:track:3k4gjmYNJugQRlh2aounZ9"
+    }
+  ]
+}

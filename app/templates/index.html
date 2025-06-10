@@ -27,6 +27,13 @@
         <a href="/logout">Déconnexion</a>
         <form action="{{ url_for('delete_account') }}" method="POST" onsubmit="return confirm('⚠️ Es-tu sûr de vouloir supprimer ton compte ? Cette action est irréversible.')">
       <button type="submit" class="dropdown-delete">Supprimer mon compte</button>
+      <button type="button" class="dropdown-update" onclick="window.location.href='/update-account'">Compte</button>
+        </form>
+        <form action="{{ url_for('change_password') }}" method="POST" onsubmit="return confirm('⚠️ Es-tu sûr de vouloir changer ton mot de passe ?')">
+          <button type="submit" class="dropdown-change-password">Changer mon mot de passe</button>
+        </form>
+        <form action="{{ url_for('delete_history') }}" method="POST" onsubmit="return confirm('⚠️ Es-tu sûr de vouloir supprimer ton historique ?')">
+          <button type="submit" class="dropdown-delete-history">Supprimer mon historique</button>
      </form>
 
         <!-- Tu pourras ajouter ici d’autres options plus tard -->
@@ -113,7 +120,7 @@
       </svg>
     </button>
   </div>
-  <input type="range" id="progress-bar" value="0" min="0" max="100" />
+  <input type="range" id="progress-bar" min="0" max="100" value="30">
 </section>
 
 
@@ -160,6 +167,7 @@ let player = null;
 let lastReconnectAttempt = 0;
 let userActive = true; // Nouvelle variable pour suivre l'activité
 let checkInterval;
+let currentPlaylistUri = null;
 
 window.onSpotifyWebPlaybackSDKReady = () => {
   const token = "{{ spotify_token }}";
@@ -189,6 +197,14 @@ window.onSpotifyWebPlaybackSDKReady = () => {
     document.getElementById("track-artist").innerText = state.track_window.current_track.artists.map(a => a.name).join(", ");
     document.getElementById("album-cover").src = state.track_window.current_track.album.images[0].url;
     document.getElementById("progress-bar").value = (state.position / state.duration) * 100;
+    console.log("Position:", state.position, "Duration:", state.duration);
+
+     if (state.context && state.context.uri) {
+    currentPlaylistUri = state.context.uri;
+    console.log("Playlist actuelle:", currentPlaylistUri);
+  }
+  
+  console.log("Position:", state.position, "Duration:", state.duration);
   });
 
 
@@ -270,6 +286,55 @@ function checkPlayerStatus() {
   }
 }
 
+setInterval(() => {
+  if (player) {
+    player.getCurrentState().then(state => {
+      if (!state) return;
+      
+      const progress = state.position;
+      const duration = state.duration;
+      const progressBar = document.getElementById('progress-bar');
+      
+      if (progressBar) {
+        progressBar.value = (progress / duration) * 100;
+      }
+    }).catch(err => {
+      console.error("Erreur:", err);
+    });
+  }
+}, 250);
+
+// Simplifier le code de la barre de progression
+const progressBar = document.getElementById('progress-bar');
+if (progressBar) {
+  progressBar.addEventListener('input', function() {
+    if (player) {
+      player.getCurrentState().then(state => {
+        if (!state) return;
+        
+        const newPosition = (this.value / 100) * state.duration;
+        console.log("Déplacement vers:", newPosition);
+        player.seek(newPosition);
+      }).catch(err => {
+        console.error("Erreur lors du seek:", err);
+      });
+    }
+  });
+}
+
+// Dans votre code JavaScript du player
+function recordInteraction(type) {
+  fetch('/record-interaction', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      type: type,
+      playlist_uri: currentPlaylistUri  // Variable globale à définir
+    })
+  });
+}
 // Fonction robuste pour le bouton play/pause
 function togglePlay() {
   if (player) {
@@ -337,7 +402,6 @@ setInterval(() => {
 }, 1000);
 
 // Gestion du changement manuel de la position de lecture
-const progressBar = document.getElementById('progress-bar');
 progressBar.addEventListener('input', (e) => {
   if (player) {
     player.getCurrentState().then(state => {
@@ -347,6 +411,8 @@ progressBar.addEventListener('input', (e) => {
     });
   }
 });
+
+
 </script>
 
 <script src="https://sdk.scdn.co/spotify-player.js"></script>

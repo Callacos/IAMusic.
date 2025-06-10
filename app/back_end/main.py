@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from flask import Flask, request, send_from_directory, render_template_string
 from flask import render_template
 from flask import session, redirect, url_for
@@ -5,7 +8,6 @@ from flask import redirect, url_for, session, flash
 from ia import trouver_playlists_depuis_phrase
 from spotify import jouer_playlist
 import spotipy
-import os
 import sqlite3
 import time
 import requests
@@ -20,6 +22,8 @@ from recommande import get_playlist_from_phrase
 from auten import get_current_playback_info
 from auten import get_spotify_for_user
 from flask import jsonify
+from recommande import get_enhanced_playlist_from_phrase
+from db_utilis import get_db_connection 
 
 def get_valid_spotify_token():
     nom_utilisateur = session.get('user_id')
@@ -40,10 +44,7 @@ def get_valid_spotify_token():
 
     return token_info['access_token']
 
-def get_db_connection():
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database'))
-    db_path = os.path.join(base_dir, 'music.db')
-    return sqlite3.connect(db_path)
+
 
 app = Flask(
     __name__,
@@ -123,23 +124,51 @@ def recevoir_phrase():
     data = request.get_json()
     phrase = data.get('phrase')
 
+    # Vérifier que l'utilisateur est connecté
+    if 'user_id' not in session:
+        return "❌ Utilisateur non connecté"
+
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (session["user_id"],))
-    utilisateur = cursor.fetchone()
-    conn.close()
-
-    if utilisateur:
-        user_id = utilisateur[0]
-        uris = get_playlist_from_phrase(user_id, phrase)
-    else:
-        return "❌ Utilisateur non trouvé"
-
+    
+    try:
+        # Récupérer l'ID de l'utilisateur
+        cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (session["user_id"],))
+        utilisateur = cursor.fetchone()
+        
+        if utilisateur:
+            user_id = utilisateur[0]
+            
+            # Enregistrer la phrase dans l'historique de recherche
+            try:
+                cursor.execute(
+                    "INSERT INTO historique_recherche (id_utilisateur, phrase) VALUES (?, ?)",
+                    (user_id, phrase)
+                )
+                conn.commit()
+                print(f"✅ Phrase '{phrase}' enregistrée dans l'historique pour l'utilisateur {user_id}")
+            except Exception as e:
+                print(f"❌ Erreur lors de l'enregistrement dans l'historique: {e}")
+            
+            # Obtenir les recommandations améliorées
+            uris = get_enhanced_playlist_from_phrase(user_id, phrase)
+        else:
+            conn.close()
+            return "❌ Utilisateur non trouvé"
+    finally:
+        conn.close()
 
     if uris:
-        jouer_playlist(uris[0])  # Lecture automatique si URI trouvée
-        url = f"https://open.spotify.com/playlist/{uris[0].split(':')[-1]}"
-        return f"<p>Playlist trouvée :</p><a href='{url}' target='_blank'>{url}</a>"
+        # Enregistrer également dans l'historique d'écoute lorsqu'une playlist est jouée
+        try:
+            jouer_playlist(uris[0])  # Lecture automatique si URI trouvée
+            # Note: l'enregistrement dans historique_ecoute devrait être fait dans jouer_playlist()
+            
+            url = f"https://open.spotify.com/playlist/{uris[0].split(':')[-1]}"
+            return f"<p>Playlist trouvée :</p><a href='{url}' target='_blank'>{url}</a>"
+        except Exception as e:
+            print(f"❌ Erreur lors de la lecture de la playlist: {e}")
+            return f"<p>Erreur lors de la lecture: {str(e)}</p>"
     else:
         return "<p>Aucune playlist trouvée pour cette phrase.</p>"
 
@@ -485,6 +514,52 @@ def delete_account():
 
     return redirect(url_for('login'))
 
+@app.route('/change-password', methods=['POST'])
+def change_password():
+    # Vérifiez que l'utilisateur est connecté
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    # Implémentez la logique de changement de mot de passe ici
+    # Pour l'instant, redirigez simplement vers la page d'accueil
+    flash('Fonctionnalité de changement de mot de passe à implémenter.', 'info')
+    return redirect(url_for('index'))
+
+@app.route('/delete-history', methods=['POST'])
+def delete_history():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    user_name = session.get('user_id')
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Récupérer l'ID de l'utilisateur
+        cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_name,))
+        result = cursor.fetchone()
+        
+        if result:
+            id_utilisateur = result[0]
+            
+            # Supprimer les entrées des deux tables d'historique
+            cursor.execute("DELETE FROM historique_recherche WHERE id_utilisateur = ?", (id_utilisateur,))
+            cursor.execute("DELETE FROM historique_ecoute WHERE id_utilisateur = ?", (id_utilisateur,))
+            cursor.execute("DELETE FROM interactions WHERE id_utilisateur = ?", (id_utilisateur,))
+            
+            conn.commit()
+            flash("✅ Historique supprimé avec succès.")
+        else:
+            flash("❌ Utilisateur non trouvé.")
+            
+    except sqlite3.Error as e:
+        flash(f"❌ Erreur lors de la suppression de l'historique : {e}")
+    finally:
+        conn.close()
+    
+    return redirect(url_for('index'))
+
 
 
 @app.route('/logout')
@@ -528,6 +603,35 @@ def get_random_featured_playlist():
             "name": "Today's Top Hits"
         })
 
+@app.route('/record-interaction', methods=['POST'])
+def record_interaction():
+    if 'user_id' not in session:
+        return jsonify({"error": "Non connecté"}), 401
+    
+    data = request.get_json()
+    interaction_type = data.get('type')
+    playlist_uri = data.get('playlist_uri')
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (session['user_id'],))
+        result = cursor.fetchone()
+        if result:
+            id_utilisateur = result[0]
+            cursor.execute(
+                "INSERT INTO interactions (id_utilisateur, playlist_uri, type_interaction) VALUES (?, ?, ?)",
+                (id_utilisateur, playlist_uri, interaction_type)
+            )
+            conn.commit()
+    except Exception as e:
+        print(f"❌ Erreur d'enregistrement d'interaction: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
+    
+    return jsonify({"success": True})
 
 
 if __name__ == '__main__':
