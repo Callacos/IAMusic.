@@ -25,12 +25,13 @@
       <button class="menu-button" onclick="toggleMenu()">☰</button>
       <div id="dropdown-menu" class="dropdown-content">
         <a href="/logout">Déconnexion</a>
+        <a href="{{ url_for('update_account') }}" class="dropdown-update">Compte</a>
         <form action="{{ url_for('delete_account') }}" method="POST" onsubmit="return confirm('⚠️ Es-tu sûr de vouloir supprimer ton compte ? Cette action est irréversible.')">
       <button type="submit" class="dropdown-delete">Supprimer mon compte</button>
-      <button type="button" class="dropdown-update" onclick="window.location.href='/update-account'">Compte</button>
         </form>
-        <form action="{{ url_for('change_password') }}" method="POST" onsubmit="return confirm('⚠️ Es-tu sûr de vouloir changer ton mot de passe ?')">
-          <button type="submit" class="dropdown-change-password">Changer mon mot de passe</button>
+        <!-- Remplacez cette partie dans index.html -->
+        <form action="{{ url_for('change_password') }}" method="GET">
+        <button type="submit" class="dropdown-change-password">Changer mon mot de passe</button>
         </form>
         <form action="{{ url_for('delete_history') }}" method="POST" onsubmit="return confirm('⚠️ Es-tu sûr de vouloir supprimer ton historique ?')">
           <button type="submit" class="dropdown-delete-history">Supprimer mon historique</button>
@@ -94,8 +95,9 @@
   <div id="track-info">
     <img id="album-cover" src="" alt="Album" />
     <div>
-      <div id="track-name">Titre</div>
-      <div id="track-artist">Artiste</div>
+     <div class="track-title" id="track-name">Titre</div>
+      <div class="track-artist" id="track-artist">Artiste</div>
+ 
     </div>
   </div>
   <div id="controls">
@@ -160,6 +162,25 @@
   </div>
 </section>
 {% endif %}
+
+<div id="titre-semaine">
+  <h2>🎵 Titre de la semaine</h2>
+  <img src="{{ titre.image }}" alt="Pochette" style="width:150px; border-radius:15px;">
+  <p style="margin-top:10px;"><strong>{{ titre.nom }}</strong> — {{ titre.artiste }}</p>
+  <button onclick="jouerTitre('{{ titre.uri }}')">▶ Écouter</button>
+</div>
+
+<script>
+function jouerTitre(uri) {
+  fetch('/jouer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uri: uri })
+  });
+}
+</script>
+
+
 
 <script>
 let deviceId = null;
@@ -464,9 +485,10 @@ function playRandomPlaylist() {
       <h3>Navigation</h3>
       <ul>
         <li><a href="/">Accueil</a></li>
-        <li><a href="/about">À propos</a></li>
-        <li><a href="/contact">Contact</a></li>
-        <li><a href="/confidentialite">Politique de confidentialité</a></li>
+        <li><a href="{{ url_for('a_propos') }}">À propos</a></li>
+        <li><a href="{{ url_for('contact') }}">Contact</a></li>
+        <li><a href="{{ url_for('confidentialite') }}">Politique de confidentialité</a></li>
+
       </ul>
     </div>
     

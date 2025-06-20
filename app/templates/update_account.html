@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modifier mon compte | IAMusic</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='update.css') }}">
+</head>
+<body>
+  <div class="page-wrapper">
+    <header>
+      <h1>🎧 IAMusic</h1>
+    </header>
+
+    <div class="account-container">
+      <form action="{{ url_for('update_account') }}" method="POST" class="update-form">
+        <h2>Modifier mon compte</h2>
+        
+        <div class="form-group">
+          <label for="username">Nom d'utilisateur</label>
+          <input type="text" id="username" name="username" value="{{ username }}" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Adresse email</label>
+          <input type="email" id="email" name="email" value="{{ email }}" required>
+        </div>
+
+		<div class="form-group">
+  			<label for="genres">Mes goûts musicaux</label>
+ 			<div class="genres-selector">
+    		{% for genre in genres %}
+     		<div class="genre-checkbox">
+        	<input type="checkbox" id="genre-{{ genre.id }}" name="genres[]" value="{{ genre.id }}" 
+          	{% if genre.id in user_genres %} checked {% endif %}>
+        	<label for="genre-{{ genre.id }}">{{ genre.nom }}</label>
+      		</div>
+    		{% endfor %}
+  			</div>
+		</div>
+
+        <button type="submit" class="btn-update">Mettre à jour</button>
+        <a href="/" class="btn-back">← Retour à l'accueil</a>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

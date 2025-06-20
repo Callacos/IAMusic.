@@ -159,6 +159,7 @@ a:hover {
   position: absolute;
   top: 10px;
   left: 10px;
+  z-index: 1000; /* Assure que le menu reste au-dessus des autres éléments */
 }
 
 .menu-button {
@@ -169,60 +170,154 @@ a:hover {
   padding: 8px 12px;
   cursor: pointer;
   border-radius: 4px;
-  transition: background-color 0.3s;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .menu-button:hover {
   background-color: #555;
+  transform: translateY(-2px);
 }
 
 .dropdown-content {
   display: none;
   position: absolute;
-  background-color: white;
-  min-width: 160px;
-  border: 1px solid #ccc;
-  box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
-  z-index: 1;
+  background-color: #1a1a1a;
+  min-width: 200px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow: hidden;
+  margin-top: 5px;
+  padding: 8px 0;
 }
 
 .dropdown-content a {
   display: block;
-  padding: 10px;
-  color: black;
+  padding: 10px 16px;
+  color: white;
   text-decoration: none;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 .dropdown-content a:hover {
-  background-color: #f0f0f0;
+  background-color: #333;
+  color: #1db954;
+  transform: translateX(3px);
 }
 
+/* Classe pour afficher le menu */
 .show {
   display: block;
+  animation: fadeIn 0.3s ease;
 }
-/* nom utilisateur*/
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Nom utilisateur */
 .user-info {
-    position: absolute;
-    top: 10px;
-    right: 20px;
-    font-weight: bold;
-    font-size: 1rem;
-    color: #fff; /* ou une autre couleur visible */
-    background-color: rgba(0, 0, 0, 0.5); /* optionnel : fond semi-transparent */
-    padding: 5px 10px;
-    border-radius: 8px;
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  font-weight: bold;
+  font-size: 1rem;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 8px 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
 }
-/* supprimé compte*/
+
+.user-info:hover {
+  background-color: rgba(29, 185, 84, 0.2);
+}
+
+/* Styles pour tous les boutons du menu */
+.dropdown-delete,
+.dropdown-update,
+.dropdown-change-password,
+.dropdown-delete-history {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+/* Style spécifique pour le bouton de suppression */
 .dropdown-delete {
-    background: none;
-    border: none;
-    color: red;
-    padding: 8px 16px;
-    width: 100%;
-    text-align: left;
-    cursor: pointer;
-    font-size: 14px;
+  color: #ff5555;
 }
+
+.dropdown-delete:hover {
+  background-color: rgba(255, 85, 85, 0.1);
+  color: #ff3333;
+  transform: translateX(3px);
+}
+
+/* Ajout d'icônes aux boutons */
+.dropdown-delete::before {
+  content: "🗑️";
+  margin-right: 8px;
+}
+
+.dropdown-update::before {
+  content: "👤";
+  margin-right: 8px;
+}
+
+.dropdown-change-password::before {
+  content: "🔑";
+  margin-right: 8px;
+}
+
+.dropdown-delete-history::before {
+  content: "🧹";
+  margin-right: 8px;
+}
+
+/* Style pour les formulaires dans le menu */
+.dropdown-content form {
+  margin: 0;
+  padding: 0;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .menu-container {
+    top: 5px;
+    left: 5px;
+  }
+  
+  .user-info {
+    top: 5px;
+    right: 5px;
+    font-size: 0.9rem;
+    padding: 5px 8px;
+  }
+  
+  .dropdown-content {
+    min-width: 180px;
+  }
+}
+
 
 .dropdown-delete:hover {
     background-color: #f2f2f2;
@@ -598,6 +693,14 @@ main form button {
 main form {
   gap: 1.5em;
 }
+.track-title,
+.track-artist {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
+}
 
 
 /* Styles pour le footer */
@@ -767,6 +870,9 @@ main form {
     width: 100%;
     font-size: 0.9em;
     text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   #album-cover {
@@ -901,4 +1007,215 @@ body, html {
 @keyframes dropdownFadeIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+#titre-semaine {
+  background-color: #121212;
+  padding: 20px;
+  border-radius: 20px;
+  margin-top: 30px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  color: white;
+}
+
+#titre-semaine h2 {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+  color: #1DB954; /* Vert Spotify */
+}
+
+#titre-semaine p {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+}
+
+#titre-semaine button {
+  background-color: #1DB954;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  font-weight: bold;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#titre-semaine button:hover {
+  background-color: #1ed760;
+}
+
+
+/* Styles pour la page update_account.html */
+.update-form {
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+  background-color: #121212;
+  padding: 2em;
+  border-radius: 1em;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 0.6s ease;
+}
+
+.update-form label {
+  display: block;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.update-form input {
+  width: 100%;
+  padding: 1em;
+  margin-bottom: 1.5em;
+  border: none;
+  border-radius: 0.5em;
+  background-color: #1e1e1e;
+  color: white;
+  font-size: 1em;
+  box-sizing: border-box;
+}
+
+.update-form input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #1db954;
+}
+
+.btn-update {
+  width: 100%;
+  padding: 1em;
+  background-color: #1db954;
+  color: white;
+  border: none;
+  border-radius: 0.5em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  margin-top: 1em;
+}
+
+.btn-update:hover {
+  background-color: #1ed760;
+  transform: scale(1.02);
+}
+
+.btn-back {
+  display: block;
+  text-align: center;
+  margin-top: 1.5em;
+  color: #1db954;
+  text-decoration: none;
+  font-size: 0.9em;
+  transition: color 0.3s;
+}
+
+.btn-back:hover {
+  color: #1ed760;
+  text-decoration: underline;
+}
+
+/* Centrage de la page */
+.container {
+  max-width: 500px;
+  width: 90%;
+  margin: 2em auto;
+  text-align: center;
+}
+
+.container h2 {
+  color: #1db954;
+  margin-bottom: 1.5em;
+  font-size: 1.5em;
+}
+
+/* Messages flash */
+.flash-message {
+  padding: 0.8em;
+  margin-bottom: 1.5em;
+  border-radius: 0.5em;
+  animation: fadeIn 0.3s;
+}
+
+.flash-success {
+  background-color: rgba(29, 185, 84, 0.2);
+  color: #1db954;
+  border-left: 4px solid #1db954;
+}
+
+.flash-error {
+  background-color: rgba(255, 85, 85, 0.2);
+  color: #ff5555;
+  border-left: 4px solid #ff5555;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .update-form {
+    padding: 1.5em;
+  }
+  
+  .container {
+    width: 85%;
+  }
+  
+  .container h2 {
+    font-size: 1.3em;
+  }
+}
+
+@media (max-width: 400px) {
+  .update-form {
+    padding: 1em;
+  }
+  
+  .update-form input {
+    padding: 0.8em;
+  }
+  
+  .btn-update {
+    padding: 0.8em;
+  }
+}
+/* Style pour le header dans update_account.html */
+header {
+  text-align: center;
+  margin-bottom: 2em;
+  padding-top: 2em;
+}
+
+header h1 {
+  font-family: 'Poppins', sans-serif;
+  font-size: 2.2em;
+  color: #1db954;
+  margin: 0;
+  animation: fadeIn 0.5s ease;
+  display: inline-block;
+  position: relative;
+}
+
+header h1::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, transparent, #1db954, transparent);
+  border-radius: 3px;
+}
+
+/* Ajustement du container principal pour assurer le bon espacement */
+.container {
+  max-width: 500px;
+  width: 90%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+/* Adaptation mobile */
+@media (max-width: 600px) {
+  header h1 {
+    font-size: 1.8em;
+  }
 }

@@ -216,7 +216,22 @@ def gerer_playlists_vedette():
         else:
             print("❗ Option invalide.")
     
-    conn.close()
+        conn.close()
+    
+def definir_titre_semaine():
+        print("\n🎵 Définir le titre de la semaine")
+        nom = input("Titre : ")
+        uri = input("URI Spotify : ")
+    
+        titre = {
+            "nom": nom,
+            "uri": uri
+        }
+    
+        with open("titre_semaine.json", "w", encoding="utf-8") as f:
+            json.dump(titre, f, indent=2, ensure_ascii=False)
+    
+        print("✅ Titre de la semaine enregistré avec succès !")
 
 
 def main():
@@ -230,7 +245,7 @@ def main():
         print("5. Quitter")
         print("6. Mettre à jour l'artiste de la semaine")
         print("7. Gérer les playlists en vedette")
-
+        print("8. Définir artiste de la semaine")
 
         choix = input("Sélectionnez une option : ")
 
@@ -249,7 +264,8 @@ def main():
             definir_artiste_semaine()
         elif choix == "7":
             gerer_playlists_vedette()
-
+        elif choix == "8":
+            definir_titre_semaine()
         else:
             print("❗ Option invalide.")
 

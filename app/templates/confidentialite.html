@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IAMusic - Politique de confidentialité</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='propo.css') }}">
+</head>
+<body>
+
+  <a href="{{ url_for('index') }}" class="btn-accueil">Accueil</a>
+
+  <h1>Politique de confidentialité</h1>
+
+  <p>
+    Chez <strong>IAMusic</strong>, nous respectons votre vie privée. Aucune donnée personnelle n’est stockée dans une base de données sans votre consentement explicite.
+  </p>
+
+  <p>
+    Les informations que vous fournissez (comme votre nom ou votre adresse e-mail dans le formulaire de contact) ne sont ni conservées, ni partagées, ni utilisées à des fins commerciales.
+  </p>
+
+  <p>
+    Nous utilisons uniquement les autorisations nécessaires pour permettre la lecture de playlists via Spotify. Aucune information de votre compte Spotify n’est exploitée en dehors de l'application.
+  </p>
+
+  <p>
+    Pour toute question sur la confidentialité de vos données, vous pouvez nous contacter via le formulaire disponible sur la page <a href="{{ url_for('contact') }}">Contact</a>.
+  </p>
+
+  <p>
+  IAMusic est une application développée par Callacos, responsable du traitement des données personnelles fournies par les utilisateurs.
+</p>
+<p>
+  IAMusic ne conserve aucune donnée personnelle sur ses serveurs. Les données saisies dans le formulaire de contact (nom, e-mail, message) sont uniquement utilisées pour répondre à l’utilisateur et ne sont ni stockées, ni partagées.
+</p>
+<p>
+  L'application utilise l'API Spotify pour lire de la musique sur le compte Spotify de l'utilisateur. Aucun mot de passe n’est collecté, seuls des jetons d’accès temporaires sont utilisés, conformément à la politique de Spotify.
+</p>
+<p>
+  IAMusic n’utilise aucun cookie ni outil de suivi tiers.
+</p>
+<p>
+  Conformément au Règlement Général sur la Protection des Données (RGPD), vous disposez d’un droit d’accès, de rectification ou de suppression de vos données personnelles. Pour exercer ce droit, veuillez utiliser le formulaire de contact.
+</p>
+
+</body>
+</html>

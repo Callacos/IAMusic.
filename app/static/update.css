@@ -1,0 +1,166 @@
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.page-wrapper {
+  width: 100%;
+  max-width: 450px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+header {
+  margin-bottom: 30px;
+}
+
+header h1 {
+  color: #1db954;
+  font-size: 2rem;
+  margin: 0;
+  position: relative;
+  display: inline-block;
+}
+
+header h1::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, transparent, #1db954, transparent);
+  border-radius: 3px;
+}
+
+.account-container {
+  background-color: #121212;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.update-form h2 {
+  color: #1db954;
+  margin-top: 0;
+  margin-bottom: 25px;
+  font-size: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: white;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+input:focus {
+  border-color: #1db954;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(29, 185, 84, 0.2);
+}
+
+.btn-update {
+  width: 100%;
+  padding: 12px;
+  background-color: #1db954;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s;
+}
+
+.btn-update:hover {
+  background-color: #1ed760;
+}
+
+.btn-back {
+  display: block;
+  margin-top: 20px;
+  color: #999;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.btn-back:hover {
+  color: #1db954;
+}
+
+@media (max-width: 480px) {
+  .page-wrapper {
+    padding: 15px;
+  }
+  
+  .account-container {
+    padding: 20px;
+  }
+  
+  header h1 {
+    font-size: 1.7rem;
+  }
+}
+
+/* Styles pour la sélection des goûts musicaux */
+.genres-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.genre-checkbox {
+  display: flex;
+  align-items: center;
+  background-color: #1e1e1e;
+  border-radius: 20px;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+.genre-checkbox:hover {
+  background-color: #252525;
+}
+
+.genre-checkbox input[type="checkbox"] {
+  width: auto;
+  margin-right: 8px;
+  accent-color: #1db954;
+}
+
+.genre-checkbox input[type="checkbox"]:checked + label {
+  color: #1db954;
+  font-weight: 600;
+}
+
+.genre-checkbox label {
+  cursor: pointer;
+  margin: 0;
+  font-weight: normal;
+}

@@ -23,7 +23,27 @@ from auten import get_current_playback_info
 from auten import get_spotify_for_user
 from flask import jsonify
 from recommande import get_enhanced_playlist_from_phrase
-from db_utilis import get_db_connection 
+from db_utilis import get_db_connection
+from auten import get_titre_semaine_infos
+from auten import auten_bp
+from functools import wraps
+from flask import session, redirect, url_for
+from flask_login import current_user, login_required
+from flask import Flask, render_template, request
+
+
+
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+
 
 def get_valid_spotify_token():
     nom_utilisateur = session.get('user_id')
@@ -52,7 +72,7 @@ app = Flask(
     static_folder='../static'
 )
 app.secret_key = 'une_clé_secrète_pour_la_session'
-
+app.register_blueprint(auten_bp)
 
 # Route HTML principale
 @app.route('/')
@@ -100,14 +120,21 @@ def index():
     token = get_valid_spotify_token()
     if not token:
         return "❌ Erreur d'authentification Spotify", 403
+    
+    with open("titre_semaine.json", "r", encoding="utf-8") as f:
+        titre_json = json.load(f)
+
+    titre = get_titre_semaine_infos()
+
 
     return render_template(
         "index.html",
         display_name=display_name,
         artiste=artiste,
         player_info=player_info,
-        spotify_token=token
-    )
+        spotify_token=token,
+        titre=titre
+        )
 
 
 
@@ -514,15 +541,61 @@ def delete_account():
 
     return redirect(url_for('login'))
 
-@app.route('/change-password', methods=['POST'])
+@app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
     # Vérifiez que l'utilisateur est connecté
     if 'user_id' not in session:
         return redirect(url_for('login'))
     
-    # Implémentez la logique de changement de mot de passe ici
-    # Pour l'instant, redirigez simplement vers la page d'accueil
-    flash('Fonctionnalité de changement de mot de passe à implémenter.', 'info')
+    user_name = session['user_id']
+    
+    # Si la méthode est GET, afficher simplement le formulaire
+    if request.method == 'GET':
+        return render_template('change_password.html')
+    
+    # Si la méthode est POST, traiter le changement de mot de passe
+    current_password = request.form.get('current_password')
+    new_password = request.form.get('new_password')
+    confirm_password = request.form.get('confirm_password')
+    
+    # Vérifier que tous les champs sont remplis
+    if not current_password or not new_password or not confirm_password:
+        flash('Tous les champs sont obligatoires', 'error')
+        return render_template('change_password.html')
+    
+    # Vérifier que les deux nouveaux mots de passe correspondent
+    if new_password != confirm_password:
+        flash('Les nouveaux mots de passe ne correspondent pas', 'error')
+        return render_template('change_password.html')
+    
+    # Vérifier le mot de passe actuel
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute('SELECT mot_de_passe FROM utilisateur WHERE nom = ?', (user_name,))
+        stored_password_hash = cursor.fetchone()[0]
+        
+        if not check_password_hash(stored_password_hash, current_password):
+            flash('Mot de passe actuel incorrect', 'error')
+            conn.close()
+            return render_template('change_password.html')
+        
+        # Mettre à jour le mot de passe
+        new_password_hash = generate_password_hash(new_password)
+        cursor.execute('UPDATE utilisateur SET mot_de_passe = ? WHERE nom = ?', 
+                      (new_password_hash, user_name))
+        conn.commit()
+        
+        flash('✅ Mot de passe changé avec succès', 'success')
+        
+    except Exception as e:
+        conn.rollback()
+        flash(f'❌ Erreur lors du changement de mot de passe : {str(e)}', 'error')
+        
+    finally:
+        conn.close()
+    
     return redirect(url_for('index'))
 
 @app.route('/delete-history', methods=['POST'])
@@ -625,13 +698,120 @@ def record_interaction():
                 (id_utilisateur, playlist_uri, interaction_type)
             )
             conn.commit()
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"error": "Utilisateur non trouvé"}), 404
     except Exception as e:
-        print(f"❌ Erreur d'enregistrement d'interaction: {e}")
         return jsonify({"error": str(e)}), 500
     finally:
         conn.close()
+
+# Route pour mettre à jour le compte utilisateur
+# Route pour mettre à jour le compte utilisateur
+@app.route('/update_account', methods=['GET', 'POST'])
+def update_account():
+    print("DEBUG: accès à /update_account")
+    if 'user_id' not in session:
+        print("DEBUG: pas connecté")
+        return redirect(url_for('login'))
+
+    user_name = session['user_id']  # Nom d'utilisateur depuis la session
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    db_path = os.path.join(basedir, '../database/music.db')
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
     
-    return jsonify({"success": True})
+    # D'abord, récupérer l'ID numérique de l'utilisateur
+    cursor.execute('SELECT id_utilisateur, nom, email FROM utilisateur WHERE nom = ?', (user_name,))
+    user = cursor.fetchone()
+    
+    if user is None:
+        flash("❌ Utilisateur introuvable", "error")
+        conn.close()
+        return redirect(url_for('index'))
+    
+    id_utilisateur = user[0]  # ID numérique de l'utilisateur
+    
+    # Récupérer tous les genres disponibles
+    cursor.execute('SELECT id_genre, nom_genre FROM genre ORDER BY nom_genre')
+    all_genres = [{'id': row[0], 'nom': row[1]} for row in cursor.fetchall()]
+    
+    # Récupérer les goûts de l'utilisateur
+    cursor.execute('SELECT id_gout FROM gout_utilisateur WHERE id_utilisateur = ?', (id_utilisateur,))
+    user_genres = [row[0] for row in cursor.fetchall()]
+    
+    if request.method == 'POST':
+        new_username = request.form['username']
+        new_email = request.form['email']
+        
+        # Récupérer les genres sélectionnés
+        selected_genres = request.form.getlist('genres[]')
+        
+        try:
+            # Mettre à jour les informations de base
+            cursor.execute('UPDATE utilisateur SET nom = ?, email = ? WHERE id_utilisateur = ?', 
+                          (new_username, new_email, id_utilisateur))
+            
+            # Supprimer les anciens goûts
+            cursor.execute('DELETE FROM gout_utilisateur WHERE id_utilisateur = ?', (id_utilisateur,))
+            
+            # Ajouter les nouveaux goûts
+            for genre_id in selected_genres:
+                cursor.execute('INSERT INTO gout_utilisateur (id_utilisateur, id_gout) VALUES (?, ?)', 
+                             (id_utilisateur, genre_id))
+            
+            conn.commit()
+            
+            # Mettre à jour la session si le nom d'utilisateur a changé
+            if new_username != user_name:
+                session['user_id'] = new_username
+                
+            flash('✅ Compte et préférences mis à jour avec succès.', 'success')
+        except sqlite3.Error as e:
+            conn.rollback()
+            flash(f'❌ Erreur lors de la mise à jour : {str(e)}', 'error')
+        
+        return redirect(url_for('update_account'))
+
+    # Pour l'affichage du formulaire, on peut utiliser les données déjà récupérées
+    username = user[1]
+    email = user[2]
+    
+    # Débogage: vérifier si les genres sont récupérés
+    print(f"Genres disponibles: {all_genres}")
+    print(f"Goûts de l'utilisateur: {user_genres}")
+    
+    conn.close()
+
+    return render_template('update_account.html', 
+                          username=username, 
+                          email=email, 
+                          genres=all_genres, 
+                          user_genres=user_genres)
+
+
+@app.route('/a-propos')
+def a_propos():
+    return render_template('propo.html')
+
+@app.route('/contact', methods=['GET', 'POST'])
+def contact():
+    if request.method == 'POST':
+        nom = request.form.get('nom')
+        email = request.form.get('email')
+        message = request.form.get('message')
+
+        print(f"[CONTACT] Nom : {nom}, Email : {email}, Message : {message}")
+        return render_template('contact.html', success=True)
+
+    return render_template('contact.html')
+
+@app.route('/confidentialite')
+def confidentialite():
+    return render_template('confidentialite.html')
+
+
+
 
 
 if __name__ == '__main__':

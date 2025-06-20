@@ -1,9 +1,16 @@
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 from dotenv import load_dotenv
-from flask import session
+from flask import session, Flask, request, jsonify
 import os
 import sqlite3
+import json
+from flask import Blueprint
+auten_bp = Blueprint("auten", __name__)
+
+
+# Create Flask app
+app = Flask(__name__)
 
 # Function to create a database connection
 def get_db_connection():
@@ -80,6 +87,49 @@ def jouer_playlist(uri, sp):
         except Exception as e:
             print(f"Erreur lors de la lecture de la playlist : {e}")
 
+def get_track_info(uri, sp):
+    try:
+        track = sp.track(uri)
+        return {
+            "nom": track["name"],
+            "artiste": track["artists"][0]["name"],
+            "image": track["album"]["images"][0]["url"],
+            "uri": uri
+        }
+    except Exception as e:
+        print(f"Erreur récupération titre : {e}")
+        return {
+            "nom": "Titre inconnu",
+            "artiste": "Artiste inconnu",
+            "image": "/static/images/default.jpg",  # une image par défaut
+            "uri": uri
+        }
+    
+@auten_bp.route('/jouer', methods=['POST'])
+def jouer():
+    data = request.get_json()
+    uri = data.get('uri')
+    if not uri:
+        return jsonify({"error": "Pas d'URI"}), 400
+    
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({"error": "Utilisateur non connecté"}), 401
+    
+    sp = get_spotify_for_user(user_id)
+    device_id, error = obtenir_appareil_actif(sp)
+    if error:
+        return jsonify({"error": error}), 400
+
+    try:
+        sp.transfer_playback(device_id=device_id, force_play=True)
+        sp.start_playback(uris=[uri])  # ← uris=[] = une track unique
+        return jsonify({"status": "Lecture lancée"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 # Fonction pour récupérer la lecture actuelle
 def get_current_playback_info(sp):
     try:
@@ -98,3 +148,31 @@ def get_current_playback_info(sp):
     except Exception as e:
         print("❌ Erreur lecture actuelle :", e)
         return None
+
+def get_titre_semaine_infos():
+    try:
+        from flask import session
+        user_id = session.get('user_id')
+        if not user_id:
+            return {
+                "nom": "Non connecté",
+                "artiste": "—",
+                "image": "/static/images/default.jpg",
+                "uri": ""
+            }
+
+        with open("titre_semaine.json", "r", encoding="utf-8") as f:
+            titre_json = json.load(f)
+
+        sp = get_spotify_for_user(user_id)
+        return get_track_info(titre_json["uri"], sp)
+
+    except Exception as e:
+        print("❌ Erreur titre de la semaine :", e)
+        return {
+            "nom": "Erreur",
+            "artiste": "—",
+            "image": "/static/images/default.jpg",
+            "uri": ""
+        }
+
