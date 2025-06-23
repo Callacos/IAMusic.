@@ -1,23 +1,127 @@
 import sqlite3
 import os
 from db_utilis import get_db_connection
+from text_analyzer import extract_keywords_with_ollama
 
-def get_db_connection():
-    db_path = "/home/callacos/IAMusic./app/database/music.db"
-    return sqlite3.connect(db_path)
+# Fonction d'extraction de mots-clés traditionnelle (votre méthode actuelle)
+def extract_keywords_traditional(phrase):
+    """
+    Extrait les mots-clés d'une phrase en recherchant dans la base de données des mots-clés
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Récupérer tous les mots-clés de la base de données
+        cursor.execute("SELECT mot FROM mot_cle")
+        all_keywords = [row[0].lower() for row in cursor.fetchall()]
+        
+        # Convertir la phrase en minuscules pour la comparaison
+        phrase_lower = phrase.lower()
+        
+        # Chercher chaque mot-clé dans la phrase
+        found_keywords = []
+        for keyword in all_keywords:
+            if keyword in phrase_lower:
+                found_keywords.append(keyword)
+        
+        print(f"Mots-clés trouvés dans la BD: {found_keywords}")
+        
+        # Si aucun mot-clé trouvé, utiliser des valeurs par défaut qui existent dans la BD
+        if not found_keywords:
+            cursor.execute("SELECT mot FROM mot_cle ORDER BY RANDOM() LIMIT 3")
+            default_keywords = [row[0] for row in cursor.fetchall()]
+            print(f"Utilisation de mots-clés par défaut: {default_keywords}")
+            return default_keywords
+        
+        return found_keywords[:3]  # Limiter à 3 mots-clés
+        
+    except Exception as e:
+        print(f"Erreur lors de l'extraction des mots-clés: {e}")
+        return ['relax', 'moderne', 'populaire']  # Fallback absolu
+    finally:
+        conn.close()
 
-def get_playlist_from_phrase(user_id, phrase):
+# Fonction unifiée d'extraction de mots-clés
+from text_analyzer import extract_keywords_with_ollama
+from db_utilis import get_db_connection
+
+def extract_keywords(phrase):
+    """
+    Fonction qui extrait les mots-clés d'une phrase utilisateur.
+    Utilise Ollama en priorité, puis une méthode traditionnelle si nécessaire.
+    Inclut normalisation et filtre sur les mots-clés disponibles en BDD.
+    """
+    print(f"🔍 Analyse de la phrase : '{phrase}'")
+
+    # Étape 1 : extraire les mots-clés via IA
+    try:
+        keywords = extract_keywords_with_ollama(phrase)
+    except Exception as e:
+        print(f"⚠️ Erreur lors de l'utilisation d'Ollama: {e}")
+        keywords = None
+
+    if not keywords or len(keywords) == 0:
+        print("📚 Utilisation de la méthode traditionnelle")
+        return extract_keywords_traditional(phrase)
+
+    print(f"🤖 Mots-clés extraits par IA: {keywords}")
+
+    # Étape 2 : normalisation
+    synonym_map = {
+        "bouger": "bouge",
+        "bougé": "bouge",
+        "je veux bouge": "bouge",
+        "danser": "bouge",
+        "dance": "bouge",
+        "rhythmic": "bouge",
+        "calm": "relax",
+        "chill": "relax",
+        "peace": "relax",
+        "relaxing": "relax",
+        "tense": "stress",
+        "anxious": "stress",
+        "energetic": "énergie",
+        "motivation": "énergie",
+        "stressé": "stress"
+    }
+
+    normalized_keywords = [synonym_map.get(k, k) for k in keywords]
+
+    # Étape 3 : comparaison avec la BDD
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT mot FROM mot_cle")
+    mots_de_la_db = [row[0].lower() for row in cursor.fetchall()]
+    conn.close()
+
+    found = [k for k in normalized_keywords if k in mots_de_la_db]
+    not_found = [k for k in normalized_keywords if k not in mots_de_la_db]
+
+    print(f"✅ Mots reconnus en BDD : {found}")
+    print(f"❌ Mots ignorés (non trouvés en BDD) : {not_found}")
+
+    return found[:3] if found else extract_keywords_traditional(phrase)
+
+
+# Mise à jour de la fonction get_playlist_from_phrase pour utiliser les mots-clés
+def get_playlist_from_phrase(user_id, phrase, keywords=None):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Extraire les mots de la phrase
-        mots = phrase.lower().split()
-        format_mots = ",".join("?" for _ in mots)
-        cursor.execute(f"SELECT id_mot_cle FROM mot_cle WHERE mot IN ({format_mots})", mots)
+        # Si aucun mot-clé n'est fourni, les extraire de la phrase
+        if keywords is None:
+            keywords = extract_keywords(phrase)
+            print(f"🔑 Mots-clés extraits : {keywords}")
+        
+        # Extraire les IDs des mots-clés
+        format_mots = ",".join("?" for _ in keywords)
+        cursor.execute(f"SELECT id_mot_cle FROM mot_cle WHERE mot IN ({format_mots})", keywords)
         mots_ids = [row[0] for row in cursor.fetchall()]
+        
         if not mots_ids:
-            print("Aucun mot-clé trouvé.")
+            print("⚠️ Aucun mot-clé trouvé dans la base de données.")
             return ["spotify:playlist:37i9dQZF1DWVuV87wUBNwc"]
 
         # Récupérer les genres aimés par l'utilisateur
@@ -29,7 +133,7 @@ def get_playlist_from_phrase(user_id, phrase):
         """, (user_id,))
         genres_ids = [row[0] for row in cursor.fetchall()]
         if not genres_ids:
-            print("L'utilisateur n'a aucun goût enregistré.")
+            print("ℹ️ L'utilisateur n'a aucun goût enregistré.")
             return ["spotify:playlist:37i9dQZF1DWVuV87wUBNwc"]
 
         # Requête finale
@@ -65,9 +169,13 @@ def get_playlist_from_phrase(user_id, phrase):
         if conn:
             conn.close()
 
-def get_enhanced_playlist_from_phrase(user_id, phrase):
-    # Récupérer les recommandations de base
-    base_recommendations = get_playlist_from_phrase(user_id, phrase)
+# Mise à jour de get_enhanced_playlist_from_phrase pour accepter des mots-clés
+def get_enhanced_playlist_from_phrase(user_id, phrase, keywords=None):
+    # Récupérer les recommandations de base avec les mots-clés (si fournis)
+    base_recommendations = get_playlist_from_phrase(user_id, phrase, keywords)
+    
+    # Le reste de la fonction reste inchangé
+    # ...
     
     # Analyser l'historique pour affiner les recommandations
     conn = get_db_connection()

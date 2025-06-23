@@ -34,6 +34,7 @@ from flask import Flask, render_template, request
 
 
 
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -146,6 +147,8 @@ def style():
     return send_from_directory('../front-end', 'style.css')
 
 # Route qui reçoit la phrase du front-end
+# Modifiez la route qui traite les phrases utilisateur
+
 @app.route('/phrase', methods=['POST'])
 def recevoir_phrase():
     data = request.get_json()
@@ -178,6 +181,7 @@ def recevoir_phrase():
                 print(f"❌ Erreur lors de l'enregistrement dans l'historique: {e}")
             
             # Obtenir les recommandations améliorées
+            # Les mots-clés seront extraits dans get_enhanced_playlist_from_phrase
             uris = get_enhanced_playlist_from_phrase(user_id, phrase)
         else:
             conn.close()
@@ -185,12 +189,10 @@ def recevoir_phrase():
     finally:
         conn.close()
 
+    # Reste du code inchangé
     if uris:
-        # Enregistrer également dans l'historique d'écoute lorsqu'une playlist est jouée
         try:
             jouer_playlist(uris[0])  # Lecture automatique si URI trouvée
-            # Note: l'enregistrement dans historique_ecoute devrait être fait dans jouer_playlist()
-            
             url = f"https://open.spotify.com/playlist/{uris[0].split(':')[-1]}"
             return f"<p>Playlist trouvée :</p><a href='{url}' target='_blank'>{url}</a>"
         except Exception as e:
@@ -198,6 +200,7 @@ def recevoir_phrase():
             return f"<p>Erreur lors de la lecture: {str(e)}</p>"
     else:
         return "<p>Aucune playlist trouvée pour cette phrase.</p>"
+    
 
 # Si tu lances le fichier manuellement
 def main():
