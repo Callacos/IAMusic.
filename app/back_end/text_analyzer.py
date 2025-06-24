@@ -3,6 +3,11 @@ import time
 import pickle
 import os
 import hashlib
+import re
+import nltk
+from nltk.stem import WordNetLemmatizer
+nltk.download('wordnet')
+lemmatizer = WordNetLemmatizer()
 
 # Cache simple pour les requêtes Ollama
 ollama_cache = {}
@@ -71,13 +76,19 @@ Keywords:"""
 
         if response.status_code == 200:
             raw = response.json().get("response", "").strip()
+            raw = re.sub(r"\d+\.\s*", "", raw)  # Supprime "1. ", "2. " etc.
+            raw = raw.replace("\n", ",")  # Remplace les sauts de ligne par des virgules
             print(f"🔍 Réponse brute : '{raw}'")
 
             for prefix in ["keywords:", "mots-clés :", "→", "- "]:
                 if raw.lower().startswith(prefix):
                     raw = raw[len(prefix):].strip()
 
-            keywords = [k.strip().lower() for k in raw.split(",") if len(k.strip()) > 1]
+            if not raw.strip():
+                print("⚠️ Réponse IA vide ou inutile")
+                return None
+
+            keywords = [lemmatizer.lemmatize(k.strip().lower(), pos='v') for k in raw.split(",") if len(k.strip()) > 1]
             keywords = list(dict.fromkeys(keywords))[:3]
 
             if keywords:
@@ -158,3 +169,30 @@ if __name__ == "__main__":
     
     # Sauvegarder le cache à la fin
     save_cache()
+
+# Dictionnaire de synonymes
+synonym_map = {
+    "bouger": "bouge",
+    "bougé": "bouge",
+    "je veux bouge": "bouge",
+    "danser": "bouge",
+    "dance": "bouge",
+    "rhythmic": "bouge",
+    "calm": "relax",
+    "chill": "relax",
+    "peace": "relax",
+    "relaxing": "relax",
+    "tense": "stress",
+    "anxious": "stress",
+    "energetic": "énergie",
+    "motivation": "énergie",
+    "stressé": "stress",
+    "crié": "crier",
+    "scream": "crier",
+}
+
+def normalize_keywords(keywords):
+    """Lemmatisation et synonymes manuels"""
+    lemmatized = [lemmatizer.lemmatize(k.strip().lower(), pos='v') for k in keywords if len(k.strip()) > 1]
+    normalized = [synonym_map.get(k, k) for k in lemmatized]
+    return list(dict.fromkeys(normalized))[:3]

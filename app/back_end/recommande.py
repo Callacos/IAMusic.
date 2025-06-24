@@ -1,8 +1,11 @@
 import sqlite3
 import os
+from flask import session
 from db_utilis import get_db_connection
 from text_analyzer import extract_keywords_with_ollama
-
+from text_analyzer import normalize_keywords
+from config import USE_IA 
+from recommande import normalize_keywords 
 # Fonction d'extraction de mots-clés traditionnelle (votre méthode actuelle)
 def extract_keywords_traditional(phrase):
     """
@@ -16,24 +19,23 @@ def extract_keywords_traditional(phrase):
         cursor.execute("SELECT mot FROM mot_cle")
         all_keywords = [row[0].lower() for row in cursor.fetchall()]
         
-        # Convertir la phrase en minuscules pour la comparaison
-        phrase_lower = phrase.lower()
-        
+        # Tokeniser et normaliser la phrase
+        tokens = phrase.lower().split()
+        tokens = normalize_keywords(tokens)
+
+        print(f"🔍 Tokens normalisés : {tokens}")
+
         # Chercher chaque mot-clé dans la phrase
-        found_keywords = []
-        for keyword in all_keywords:
-            if keyword in phrase_lower:
-                found_keywords.append(keyword)
-        
+        found_keywords = [token for token in tokens if token in all_keywords]
+
         print(f"Mots-clés trouvés dans la BD: {found_keywords}")
         
-        # Si aucun mot-clé trouvé, utiliser des valeurs par défaut qui existent dans la BD
         if not found_keywords:
             cursor.execute("SELECT mot FROM mot_cle ORDER BY RANDOM() LIMIT 3")
             default_keywords = [row[0] for row in cursor.fetchall()]
             print(f"Utilisation de mots-clés par défaut: {default_keywords}")
             return default_keywords
-        
+
         return found_keywords[:3]  # Limiter à 3 mots-clés
         
     except Exception as e:
@@ -48,60 +50,45 @@ from db_utilis import get_db_connection
 
 def extract_keywords(phrase):
     """
-    Fonction qui extrait les mots-clés d'une phrase utilisateur.
-    Utilise Ollama en priorité, puis une méthode traditionnelle si nécessaire.
-    Inclut normalisation et filtre sur les mots-clés disponibles en BDD.
+    Extrait les mots-clés d'une phrase utilisateur.
+    Utilise Ollama si l'IA est activée, sinon méthode traditionnelle.
+    Applique une normalisation et filtre par les mots-clés présents en BDD.
     """
     print(f"🔍 Analyse de la phrase : '{phrase}'")
 
-    # Étape 1 : extraire les mots-clés via IA
-    try:
-        keywords = extract_keywords_with_ollama(phrase)
-    except Exception as e:
-        print(f"⚠️ Erreur lors de l'utilisation d'Ollama: {e}")
-        keywords = None
+    use_ia = session.get('use_ia', True)
+    keywords = None
 
-    if not keywords or len(keywords) == 0:
+    if use_ia:
+        try:
+            keywords = extract_keywords_with_ollama(phrase)
+            print(f"🤖 Mots-clés extraits par IA: {keywords}")
+        except Exception as e:
+            print(f"⚠️ Erreur IA : {e}")
+            keywords = None
+
+    if not keywords:
         print("📚 Utilisation de la méthode traditionnelle")
         return extract_keywords_traditional(phrase)
 
-    print(f"🤖 Mots-clés extraits par IA: {keywords}")
+    # Normalisation
+    keywords = normalize_keywords(keywords)
 
-    # Étape 2 : normalisation
-    synonym_map = {
-        "bouger": "bouge",
-        "bougé": "bouge",
-        "je veux bouge": "bouge",
-        "danser": "bouge",
-        "dance": "bouge",
-        "rhythmic": "bouge",
-        "calm": "relax",
-        "chill": "relax",
-        "peace": "relax",
-        "relaxing": "relax",
-        "tense": "stress",
-        "anxious": "stress",
-        "energetic": "énergie",
-        "motivation": "énergie",
-        "stressé": "stress"
-    }
-
-    normalized_keywords = [synonym_map.get(k, k) for k in keywords]
-
-    # Étape 3 : comparaison avec la BDD
+    # Vérification en base
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT mot FROM mot_cle")
     mots_de_la_db = [row[0].lower() for row in cursor.fetchall()]
     conn.close()
 
-    found = [k for k in normalized_keywords if k in mots_de_la_db]
-    not_found = [k for k in normalized_keywords if k not in mots_de_la_db]
+    found = [k for k in keywords if k in mots_de_la_db]
+    not_found = [k for k in keywords if k not in mots_de_la_db]
 
     print(f"✅ Mots reconnus en BDD : {found}")
     print(f"❌ Mots ignorés (non trouvés en BDD) : {not_found}")
 
     return found[:3] if found else extract_keywords_traditional(phrase)
+
 
 
 # Mise à jour de la fonction get_playlist_from_phrase pour utiliser les mots-clés

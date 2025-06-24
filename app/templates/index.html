@@ -44,6 +44,16 @@
     <div class="user-info">
     Bonjour, {{ display_name }} 👋
     </div>
+    <form id="iaToggleForm" action="/toggle_ia" method="post">
+  <label class="switch">
+    <input type="checkbox" id="toggleIA" name="use_ia" onchange="document.getElementById('iaToggleForm').submit()"
+      {{ 'checked' if session.get('use_ia', True) else '' }}>
+    <span class="slider"></span>
+  </label>
+   <span>
+    IA {{ "activée ✅" if session.get('use_ia', True) else "désactivée ❌" }}
+  </span>
+</form>
     
   </main>
 

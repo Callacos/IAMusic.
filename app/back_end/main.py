@@ -30,6 +30,8 @@ from functools import wraps
 from flask import session, redirect, url_for
 from flask_login import current_user, login_required
 from flask import Flask, render_template, request
+import nltk
+
 
 
 
@@ -189,7 +191,6 @@ def recevoir_phrase():
     finally:
         conn.close()
 
-    # Reste du code inchangé
     if uris:
         try:
             jouer_playlist(uris[0])  # Lecture automatique si URI trouvée
@@ -812,6 +813,14 @@ def contact():
 @app.route('/confidentialite')
 def confidentialite():
     return render_template('confidentialite.html')
+
+@app.route('/toggle_ia', methods=['POST'])
+def toggle_ia():
+    # On inverse la valeur actuelle
+    current = session.get('use_ia', True)
+    session['use_ia'] = not current
+    print("🔁 IA maintenant activée" if not current else "🔁 IA maintenant désactivée")
+    return redirect(request.referrer or url_for('index'))
 
 
 
