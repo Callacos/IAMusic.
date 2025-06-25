@@ -6,7 +6,6 @@ import hashlib
 import re
 import nltk
 from nltk.stem import WordNetLemmatizer
-nltk.download('wordnet')
 lemmatizer = WordNetLemmatizer()
 
 # Cache simple pour les requêtes Ollama
