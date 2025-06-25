@@ -1,3 +1,10 @@
 http://127.0.0.1:5000/
 http://127.0.0.1:5000/preferences
 http://127.0.0.1:5000/login
+
+https://iamusic.onrender.com
+
+
+
+http://localhost:8888/callback
+http://127.0.0.1:5000/callback
