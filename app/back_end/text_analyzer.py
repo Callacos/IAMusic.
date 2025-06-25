@@ -202,13 +202,23 @@ synonym_map = {
 }
 
 def normalize_keywords(keywords):
-    """Lemmatisation et synonymes manuels"""
-    lemmatized = []
-    for k in keywords:
-        word = k.strip().lower()
-        if len(word) <= 2:
-         continue
-    lemma = lemmatizer.lemmatize(word, pos='v')
-    lemmatized.append(lemma if lemma else word)
-    normalized = [synonym_map.get(k, k) for k in lemmatized]
-    return list(dict.fromkeys(normalized))[:3]
+    """Normalise une liste de mots-clés en appliquant lemmatisation et dédoublonnage"""
+    if not keywords:
+        return []
+    
+    try:
+        # Lemmatisation des mots-clés
+        lemmatized = []
+        for k in keywords:
+            try:
+                lemmatized.append(lemmatizer.lemmatize(k.strip().lower(), pos='v'))
+            except Exception as e:
+                print(f"⚠️ Erreur de lemmatisation pour '{k}': {e}")
+                lemmatized.append(k.strip().lower())
+        
+        # Supprimer les doublons tout en préservant l'ordre
+        return list(dict.fromkeys(lemmatized))
+    except Exception as e:
+        print(f"⚠️ Erreur dans normalize_keywords: {e}")
+        # En cas d'erreur, retourner les mots-clés originaux sans traitement
+        return list(dict.fromkeys([k.strip().lower() for k in keywords]))

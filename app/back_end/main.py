@@ -31,6 +31,29 @@ from flask import session, redirect, url_for
 from flask_login import current_user, login_required
 from flask import Flask, render_template, request
 import nltk
+import types
+
+# Configuration de NLTK
+nltk_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'nltk_data')
+if not os.path.exists(nltk_data_dir):
+    os.makedirs(nltk_data_dir)
+nltk.data.path.append(nltk_data_dir)
+
+# Définition de la fonction de fallback pour la lemmatisation
+def dummy_lemmatize(word, **kwargs):
+    return word
+
+dummy_lemmatizer = types.SimpleNamespace()
+dummy_lemmatizer.lemmatize = dummy_lemmatize
+sys.modules['text_analyzer'].lemmatizer = dummy_lemmatizer
+
+# Téléchargement des ressources NLTK au démarrage
+try:
+    nltk.download('punkt', download_dir=nltk_data_dir, quiet=True)
+    nltk.download('wordnet', download_dir=nltk_data_dir, quiet=True)
+    print("✅ Ressources NLTK téléchargées avec succès")
+except Exception as e:
+    print(f"⚠️ Erreur lors du téléchargement des ressources NLTK: {e}")
 
 # Ne charge .env que si on est en local (pas sur Render)
 if os.getenv("RENDER") != "true":

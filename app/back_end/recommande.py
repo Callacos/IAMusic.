@@ -32,30 +32,23 @@ def extract_keywords_traditional(phrase):
         # Supprimer les doublons imbriqués (ex: "mode" dans "depeche mode")
         filtered_keywords = []
         for kw in sorted(found_keywords, key=len, reverse=True):
-            if not any(kw in longer_kw for longer_kw in filtered_keywords):
+            if not any(kw in longer_kw and kw != longer_kw for longer_kw in filtered_keywords):
                 filtered_keywords.append(kw)
 
-        found_keywords = normalize_keywords(filtered_keywords)
-
-        print(f"🔍 Tokens normalisés : {found_keywords}")
-        print(f"Mots-clés trouvés dans la BD: {found_keywords}")
-
-        # Si aucun mot-clé trouvé, on prend 3 aléatoires existants
-        if not found_keywords:
-            cursor.execute("SELECT mot FROM mot_cle ORDER BY RANDOM() LIMIT 3")
-            default_keywords = [row[0] for row in cursor.fetchall()]
-            print(f"Utilisation de mots-clés par défaut: {default_keywords}")
-            return default_keywords
-
-        return found_keywords[:3]
+        # Si aucun mot-clé n'est trouvé, utiliser des mots-clés par défaut
+        if not filtered_keywords:
+            print("ℹ️ Aucun mot-clé trouvé, utilisation des mots-clés par défaut")
+            filtered_keywords = ['relax', 'moderne', 'populaire']  # Mots-clés par défaut
+            
+        return normalize_keywords(filtered_keywords)
 
     except Exception as e:
         print(f"Erreur lors de l'extraction des mots-clés: {e}")
+        # En cas d'erreur, retourner des mots-clés par défaut
         return ['relax', 'moderne', 'populaire']
 
     finally:
         conn.close()
-
 
 # Fonction unifiée d'extraction de mots-clés
 from text_analyzer import extract_keywords_with_ollama
