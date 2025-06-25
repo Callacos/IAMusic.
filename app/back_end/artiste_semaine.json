@@ -1,17 +1,21 @@
 {
-  "nom": "PNL",
-  "image": "https://i.scdn.co/image/ab6761610000e5eb51767bb5e3e3add66699344b",
+  "nom": "Depeche Mode",
+  "image": "https://i.scdn.co/image/ab6761610000e5ebaff13c9484fdad590ccfb73c",
   "albums": [
     {
-      "nom": "Deux fr\u00e8res",
-      "uri": "spotify:album:0VbjQH6iXN5VdE0OX35cpD",
-      "image": "https://i.scdn.co/image/ab67616d0000b27357c87959e63d634cd5128e36"
+      "nom": "Memento Mori",
+      "uri": "spotify:album:3QWc9HhBWgk9dIEwOkJx4q",
+      "image": "https://i.scdn.co/image/ab67616d0000b273dc2882cd98a9bc32e56e6293"
     }
   ],
   "titres": [
     {
-      "nom": "uranus",
-      "uri": "spotify:track:7lpfmAMzW3MlWSnXrwAGky"
+      "nom": "Enjoy the silence",
+      "uri": "spotify:track:0yp3TvJNlG50Q4tAHWNCRm"
+    },
+    {
+      "nom": "Never let me down again",
+      "uri": "spotify:track:0T57cTUpYpvSvZ3GowBuTP"
     }
   ]
 }

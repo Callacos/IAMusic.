@@ -128,3 +128,96 @@ def spotify_login():
 
     # 🚀 Redirige vers l'authentification Spotify
     return redirect(auth_url)
+               
+
+
+
+
+try:
+                cursor.execute('''
+                    INSERT INTO utilisateur (nom, email, mot_de_passe, a_choisi_gouts)
+                    VALUES (?, ?, ?, 0)
+                ''', (nom, email, hashed_password))
+                conn.commit()
+
+                session['user_id'] = nom
+                session['first_login'] = True
+                return redirect(url_for('spotify_login'))
+
+            except Exception as e:
+                print("Erreur DB:", e)
+
+            finally:
+                conn.close()
+
+
+
+/* Menu bouton */
+.menu-container {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.menu-button {
+  background-color: #333;
+  color: white;
+  font-size: 24px;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.menu-button:hover {
+  background-color: #555;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 160px;
+  border: 1px solid #ccc;
+  box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  display: block;
+  padding: 10px;
+  color: black;
+  text-decoration: none;
+}
+
+.dropdown-content a:hover {
+  background-color: red;
+}
+
+.show {
+  display: block;
+}
+/* nom utilisateur*/
+.user-info {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-weight: bold;
+    font-size: 1rem;
+    color: #fff; /* ou une autre couleur visible */
+    background-color: rgba(0, 0, 0, 0.5); /* optionnel : fond semi-transparent */
+    padding: 5px 10px;
+    border-radius: 8px;
+}
+/* supprimé compte*/
+.dropdown-delete {
+    background: none;
+    border: none;
+    color: red;
+    padding: 8px 16px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+}
