@@ -4,3 +4,4 @@ python-dotenv==1.1.0
 requests==2.31.0
 spotipy==2.25.1
 gunicorn==21.2.0
+nltk==3.9.1
