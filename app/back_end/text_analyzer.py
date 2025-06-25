@@ -189,10 +189,27 @@ synonym_map = {
     "stressé": "stress",
     "crié": "crier",
     "scream": "crier",
+    "sport": "sport",
+    "muscu": "sport",
+    "musculation": "sport",
+    "gym": "sport",
+    "entrainement": "sport",
+    "training": "sport",
+    "park": "linkin park",
+    "linkin": "linkin park",
+    "taff": "travail",
+    "boulot": "travail",
+    
 }
 
 def normalize_keywords(keywords):
     """Lemmatisation et synonymes manuels"""
-    lemmatized = [lemmatizer.lemmatize(k.strip().lower(), pos='v') for k in keywords if len(k.strip()) > 1]
+    lemmatized = []
+    for k in keywords:
+        word = k.strip().lower()
+        if len(word) <= 2:
+         continue
+    lemma = lemmatizer.lemmatize(word, pos='v')
+    lemmatized.append(lemma if lemma else word)
     normalized = [synonym_map.get(k, k) for k in lemmatized]
     return list(dict.fromkeys(normalized))[:3]
