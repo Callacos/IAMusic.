@@ -9,40 +9,53 @@ from recommande import normalize_keywords
 # Fonction d'extraction de mots-clés traditionnelle (votre méthode actuelle)
 def extract_keywords_traditional(phrase):
     """
-    Extrait les mots-clés d'une phrase en recherchant dans la base de données des mots-clés
+    Extrait les mots-clés d'une phrase en recherchant dans la base de données des mots-clés.
+    Gère les expressions entières (ex : 'depeche mode') avant les mots isolés.
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     try:
         # Récupérer tous les mots-clés de la base de données
         cursor.execute("SELECT mot FROM mot_cle")
         all_keywords = [row[0].lower() for row in cursor.fetchall()]
-        
-        # Tokeniser et normaliser la phrase
-        tokens = phrase.lower().split()
-        tokens = normalize_keywords(tokens)
 
-        print(f"🔍 Tokens normalisés : {tokens}")
+        # Mettre la phrase en minuscules
+        phrase_lower = phrase.lower()
 
-        # Chercher chaque mot-clé dans la phrase
-        found_keywords = [token for token in tokens if token in all_keywords]
+        # Chercher les expressions entières d'abord (ex: "depeche mode")
+        found_keywords = []
+        for keyword in all_keywords:
+            if keyword in phrase_lower:
+                found_keywords.append(keyword)
 
+        # Supprimer les doublons imbriqués (ex: "mode" dans "depeche mode")
+        filtered_keywords = []
+        for kw in sorted(found_keywords, key=len, reverse=True):
+            if not any(kw in longer_kw for longer_kw in filtered_keywords):
+                filtered_keywords.append(kw)
+
+        found_keywords = normalize_keywords(filtered_keywords)
+
+        print(f"🔍 Tokens normalisés : {found_keywords}")
         print(f"Mots-clés trouvés dans la BD: {found_keywords}")
-        
+
+        # Si aucun mot-clé trouvé, on prend 3 aléatoires existants
         if not found_keywords:
             cursor.execute("SELECT mot FROM mot_cle ORDER BY RANDOM() LIMIT 3")
             default_keywords = [row[0] for row in cursor.fetchall()]
             print(f"Utilisation de mots-clés par défaut: {default_keywords}")
             return default_keywords
 
-        return found_keywords[:3]  # Limiter à 3 mots-clés
-        
+        return found_keywords[:3]
+
     except Exception as e:
         print(f"Erreur lors de l'extraction des mots-clés: {e}")
-        return ['relax', 'moderne', 'populaire']  # Fallback absolu
+        return ['relax', 'moderne', 'populaire']
+
     finally:
         conn.close()
+
 
 # Fonction unifiée d'extraction de mots-clés
 from text_analyzer import extract_keywords_with_ollama

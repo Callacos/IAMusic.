@@ -6,6 +6,8 @@ from flask import request, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import render_template_string
 from flask import send_from_directory
+from dotenv import load_dotenv
+load_dotenv()
 
 
 # Ajout du chemin vers le dossier back-end
@@ -13,8 +15,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'b
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from ia import trouver_playlists_depuis_phrase
-from spotify import jouer_playlist
+from back_end.ia import trouver_playlists_depuis_phrase
+from back_end.spotify import jouer_playlist
 
 app = Flask(__name__)
 CORS(app)
@@ -43,7 +45,8 @@ def recevoir_phrase():
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import session
 
-app.secret_key = "ma_clé_ultra_secrète"
+app.secret_key = os.getenv("SECRET_KEY")
+
 
 @app.route('/login', methods=['POST'])
 def login():

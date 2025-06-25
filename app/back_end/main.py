@@ -31,8 +31,9 @@ from flask import session, redirect, url_for
 from flask_login import current_user, login_required
 from flask import Flask, render_template, request
 import nltk
+from dotenv import load_dotenv
 
-
+load_dotenv()
 
 
 
@@ -74,7 +75,7 @@ app = Flask(
     template_folder='../templates',
     static_folder='../static'
 )
-app.secret_key = 'une_clé_secrète_pour_la_session'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'clé_dev_par_défaut')
 app.register_blueprint(auten_bp)
 
 # Route HTML principale

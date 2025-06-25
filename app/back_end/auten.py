@@ -14,7 +14,8 @@ app = Flask(__name__)
 
 # Function to create a database connection
 def get_db_connection():
-    conn = sqlite3.connect('database.db')
+    db_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'database', 'music.db'))
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -61,8 +62,8 @@ def jouer_playlist(uri, sp):
         print(f"Erreur lors du lancement de la lecture: {e}")
         return
     # Enregistrer dans l'historique
-    user_id = session.get('user_id')
-    if user_id:
+    id_utilisateur = session.get("utilisateur_id")
+    if id_utilisateur:
         try:
             # Récupérer les infos de la playlist
             playlist_data = sp.playlist(uri.split(':')[-1])
@@ -72,7 +73,7 @@ def jouer_playlist(uri, sp):
             cursor = conn.cursor()
             
             # Récupérer l'ID utilisateur
-            cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_id,))
+            cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (id_utilisateur,))
             result = cursor.fetchone()
             if result:
                 id_utilisateur = result[0]
@@ -112,7 +113,7 @@ def jouer():
     if not uri:
         return jsonify({"error": "Pas d'URI"}), 400
     
-    user_id = session.get('user_id')
+    user_id = session.get("user_id") or session.get("utilisateur_id")
     if not user_id:
         return jsonify({"error": "Utilisateur non connecté"}), 401
     
@@ -152,7 +153,7 @@ def get_current_playback_info(sp):
 def get_titre_semaine_infos():
     try:
         from flask import session
-        user_id = session.get('user_id')
+        user_id = session.get("user_id") or session.get("utilisateur_id")
         if not user_id:
             return {
                 "nom": "Non connecté",

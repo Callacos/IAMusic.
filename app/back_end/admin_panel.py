@@ -69,7 +69,7 @@ def bloquer_utilisateur():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     try:
-        cursor.execute("UPDATE user SET bloque = 1 WHERE id_utilisateur = ?", (id_user,))
+        cursor.execute("UPDATE utilisateur SET bloque = 1 WHERE id_utilisateur = ?", (id_user,))
         conn.commit()
         print("✅ Utilisateur bloqué.")
     except sqlite3.Error as e:
@@ -91,7 +91,7 @@ def debloquer_utilisateur():
         conn.close()
         
 def authentifier_admin():
-    mot_de_passe_attendu = "admin123"
+    mot_de_passe_attendu = os.getenv("ADMIN_PASSWORD")
     print("🔐 Accès au panneau d'administration IAMusic")
     mot_de_passe = getpass.getpass("Entrez le mot de passe : ")
     if mot_de_passe != mot_de_passe_attendu:
@@ -216,7 +216,7 @@ def gerer_playlists_vedette():
         else:
             print("❗ Option invalide.")
     
-        conn.close()
+    conn.close()
     
 def definir_titre_semaine():
         print("\n🎵 Définir le titre de la semaine")
@@ -245,7 +245,7 @@ def main():
         print("5. Quitter")
         print("6. Mettre à jour l'artiste de la semaine")
         print("7. Gérer les playlists en vedette")
-        print("8. Définir artiste de la semaine")
+        print("8. Définir titre de la semaine")
 
         choix = input("Sélectionnez une option : ")
 
