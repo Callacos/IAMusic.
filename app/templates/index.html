@@ -527,5 +527,58 @@ function playRandomPlaylist() {
   </div>
 </footer>
 
+<script>
+console.log("Page chargée");
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("DOM chargé");
+  
+  // Tester si les éléments existent
+  var form = document.querySelector('form');
+  var input = document.querySelector('input[type="text"]');
+  
+  console.log("Formulaire trouvé:", !!form);
+  console.log("Input trouvé:", !!input);
+  
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      console.log("Formulaire soumis");
+      
+      var phrase = input.value;
+      console.log("Phrase à envoyer:", phrase);
+      
+      // Test de fetch basique
+      fetch('/phrase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phrase: phrase })
+      })
+      .then(response => {
+        console.log("Réponse reçue:", response.status);
+        return response.text();
+      })
+      .then(data => {
+        console.log("Données reçues:", data.substring(0, 100) + "...");
+      })
+      .catch(error => {
+        console.error("Erreur fetch:", error);
+      });
+    });
+  }
+});
+
+// Fonction de test pour vérifier si l'API est accessible
+function testPhrase() {
+  console.log("Test d'envoi");
+  fetch('/phrase', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phrase: "test" })
+  })
+  .then(response => console.log("Test réussi:", response.status))
+  .catch(error => console.error("Test échoué:", error));
+}
+</script>
+
 
 </html>

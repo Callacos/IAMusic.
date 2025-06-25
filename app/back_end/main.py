@@ -826,7 +826,47 @@ def toggle_ia():
 
 
 
-
+@app.route('/test-phrase')
+def test_phrase():
+    return render_template_string("""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Test Phrase</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+    </head>
+    <body>
+        <h1>Test d'envoi de phrase</h1>
+        <form id="test-form">
+            <input type="text" id="test-input" placeholder="Entrez une phrase">
+            <button type="submit">Envoyer</button>
+        </form>
+        <div id="result"></div>
+        
+        <script>
+        document.getElementById('test-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            var phrase = document.getElementById('test-input').value;
+            
+            document.getElementById('result').textContent = "Envoi de: " + phrase;
+            
+            fetch('/phrase', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phrase: phrase })
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('result').textContent += " - Réponse: OK";
+            })
+            .catch(error => {
+                document.getElementById('result').textContent += " - Erreur: " + error;
+            });
+        });
+        </script>
+    </body>
+    </html>
+    """)
 
 if __name__ == '__main__':
     # Change ici si tu veux tester localement en ligne de commande ou lancer le serveur
