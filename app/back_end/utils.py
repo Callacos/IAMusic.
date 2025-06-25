@@ -44,7 +44,7 @@ def get_spotify_oauth_for_user(nom_utilisateur):
     return SpotifyOAuth(
         client_id=os.getenv("SPOTIPY_CLIENT_ID"),
         client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
-        redirect_uri="http://127.0.0.1:5000/callback",
+        redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
         scope="user-read-playback-state user-modify-playback-state streaming user-read-private",
         cache_path=f".cache-{nom_utilisateur}",
         show_dialog=True
