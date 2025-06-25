@@ -6,46 +6,79 @@ from text_analyzer import extract_keywords_with_ollama
 from text_analyzer import normalize_keywords
 from config import USE_IA 
 from recommande import normalize_keywords 
+from nltk.stem import WordNetLemmatizer
+
+# Initialize lemmatizer
+lemmatizer = WordNetLemmatizer()
+
+# Dictionary mapping of synonyms
+synonym_map = {
+    # Example entries (replace with your actual synonyms)
+    'happy': 'joyeux',
+    'sad': 'triste',
+    'angry': 'en colère',
+    'relaxed': 'relax'
+    # Add more synonyms as needed
+}
+
 # Fonction d'extraction de mots-clés traditionnelle (votre méthode actuelle)
 def extract_keywords_traditional(phrase):
-    """
-    Extrait les mots-clés d'une phrase en recherchant dans la base de données des mots-clés.
-    Gère les expressions entières (ex : 'depeche mode') avant les mots isolés.
-    """
+    """Extraits des mots-clés d'une phrase en utilisant la base de données et les synonymes"""
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
+        # Vérifier d'abord dans la map de synonymes
+        phrase_lower = phrase.lower()
+        
+        # Nouvelle étape: vérifier les variations par lemmatisation
+        try:
+            lemmatized_phrase = lemmatizer.lemmatize(phrase_lower, pos='v')
+            if lemmatized_phrase != phrase_lower:
+                print(f"🔄 Phrase lemmatisée: '{phrase_lower}' → '{lemmatized_phrase}'")
+                # Vérifier si la version lemmatisée est dans les synonymes
+                if lemmatized_phrase in synonym_map:
+                    return [synonym_map[lemmatized_phrase]]
+        except:
+            pass
+            
+        # Vérifier la phrase directement dans les synonymes
+        if phrase_lower in synonym_map:
+            print(f"🔍 Synonyme trouvé: '{phrase_lower}' → '{synonym_map[phrase_lower]}'")
+            return [synonym_map[phrase_lower]]
+            
         # Récupérer tous les mots-clés de la base de données
         cursor.execute("SELECT mot FROM mot_cle")
         all_keywords = [row[0].lower() for row in cursor.fetchall()]
 
-        # Mettre la phrase en minuscules
-        phrase_lower = phrase.lower()
-
-        # Chercher les expressions entières d'abord (ex: "depeche mode")
+        # Chercher les expressions entières d'abord
         found_keywords = []
         for keyword in all_keywords:
             if keyword in phrase_lower:
                 found_keywords.append(keyword)
 
-        # Supprimer les doublons imbriqués (ex: "mode" dans "depeche mode")
+        # Supprimer les doublons imbriqués
         filtered_keywords = []
         for kw in sorted(found_keywords, key=len, reverse=True):
             if not any(kw in longer_kw and kw != longer_kw for longer_kw in filtered_keywords):
                 filtered_keywords.append(kw)
 
-        # Si aucun mot-clé n'est trouvé, utiliser des mots-clés par défaut
+        # Si aucun mot-clé trouvé, générer des mots-clés aléatoires
         if not filtered_keywords:
-            print("ℹ️ Aucun mot-clé trouvé, utilisation des mots-clés par défaut")
-            filtered_keywords = ['relax', 'moderne', 'populaire']  # Mots-clés par défaut
-            
-        return normalize_keywords(filtered_keywords)
+            print("ℹ️ Aucun mot-clé trouvé, sélection aléatoire")
+            cursor.execute("SELECT mot FROM mot_cle ORDER BY RANDOM() LIMIT 3")
+            random_keywords = [row[0].lower() for row in cursor.fetchall()]
+            if random_keywords:
+                print(f"🎲 Mots-clés aléatoires: {random_keywords}")
+                return random_keywords
+            else:
+                return ['relax', 'moderne', 'populaire']  # Fallback si la BD est vide
+                
+        return filtered_keywords
 
     except Exception as e:
         print(f"Erreur lors de l'extraction des mots-clés: {e}")
-        # En cas d'erreur, retourner des mots-clés par défaut
-        return ['relax', 'moderne', 'populaire']
+        return ['relax', 'moderne', 'populaire']  # Mots-clés par défaut
 
     finally:
         conn.close()
@@ -163,89 +196,129 @@ def get_playlist_from_phrase(user_id, phrase, keywords=None):
             conn.close()
 
 # Mise à jour de get_enhanced_playlist_from_phrase pour accepter des mots-clés
-def get_enhanced_playlist_from_phrase(user_id, phrase, keywords=None):
-    # Récupérer les recommandations de base avec les mots-clés (si fournis)
-    base_recommendations = get_playlist_from_phrase(user_id, phrase, keywords)
+def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
+    """Récupère des playlists en fonction d'une phrase utilisateur, en tenant compte des goûts"""
     
-    # Le reste de la fonction reste inchangé
-    # ...
+    # Extraction des mots-clés si non fournis
+    keywords = extracted_keywords if extracted_keywords else extract_keywords(phrase)
+    print(f"🔑 Mots-clés extraits : {keywords}")
     
-    # Analyser l'historique pour affiner les recommandations
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # Récupérer les playlists les plus écoutées
+        # Récupérer les ID des mots-clés
+        placeholders = ','.join(['?'] * len(keywords))
+        cursor.execute(f"SELECT id_mot_cle FROM mot_cle WHERE mot IN ({placeholders})", keywords)
+        keyword_ids = [row[0] for row in cursor.fetchall()]
+        print(f"🔍 Requête avec id_mot_cle : {keyword_ids}")
+        
+        # Si aucun mot-clé trouvé, prendre des mots-clés aléatoires
+        if not keyword_ids:
+            cursor.execute("SELECT id_mot_cle FROM mot_cle ORDER BY RANDOM() LIMIT 3")
+            keyword_ids = [row[0] for row in cursor.fetchall()]
+            print(f"🎲 Mots-clés aléatoires: {keyword_ids}")
+        
+        # Récupérer les genres préférés de l'utilisateur
+        cursor.execute("SELECT id_genre FROM gouts_utilisateur WHERE id_utilisateur = ?", (user_id,))
+        genre_ids = [row[0] for row in cursor.fetchall()]
+        print(f"🔍 Requête avec id_genre : {genre_ids}")
+        
+        # Si aucun genre trouvé, utiliser tous les genres
+        if not genre_ids:
+            cursor.execute("SELECT id_genre FROM genre")
+            genre_ids = [row[0] for row in cursor.fetchall()]
+        
+        # Récupérer les playlists récentes pour les exclure
         cursor.execute("""
-            SELECT playlist_uri, COUNT(*) as count 
-            FROM historique_ecoute 
+            SELECT uri_playlist FROM historique_ecoute 
             WHERE id_utilisateur = ? 
-            GROUP BY playlist_uri 
-            ORDER BY count DESC 
-            LIMIT 5
+            ORDER BY date_ecoute DESC LIMIT 5
         """, (user_id,))
-        favorite_playlists = cursor.fetchall()
+        recent_playlists = [row[0] for row in cursor.fetchall()]
+        print(f"🔄 Playlists récentes à exclure: {recent_playlists}")
         
-        # Analyser les interactions positives
-        cursor.execute("""
-            SELECT playlist_uri, COUNT(*) as interactions
-            FROM interactions
-            WHERE id_utilisateur = ? AND type_interaction != 'skip'
-            GROUP BY playlist_uri
-            ORDER BY interactions DESC
-            LIMIT 5
-        """, (user_id,))
-        positive_interactions = cursor.fetchall()
+        # Construire la clause d'exclusion
+        exclusion_clause = ""
+        exclusion_params = []
+        if recent_playlists:
+            placeholders = ','.join(['?'] * len(recent_playlists))
+            exclusion_clause = f"AND p.uri NOT IN ({placeholders})"
+            exclusion_params = recent_playlists
         
-        # Si aucune recommandation de base, utiliser les favorites directement
-        if not base_recommendations and (favorite_playlists or positive_interactions):
-            # Combiner les playlists favorites et interactions positives
-            combined_playlists = {}
-            
-            # Ajouter poids des playlists écoutées
-            for uri, count in favorite_playlists:
-                combined_playlists[uri] = count
-            
-            # Ajouter poids des interactions positives (avec plus de valeur)
-            for uri, count in positive_interactions:
-                if uri in combined_playlists:
-                    combined_playlists[uri] += count * 1.5  # Bonus pour interactions positives
-                else:
-                    combined_playlists[uri] = count * 1.5
-            
-            # Trier par score et prendre les 3 meilleures
-            sorted_playlists = sorted(combined_playlists.items(), key=lambda x: x[1], reverse=True)
-            return [uri for uri, _ in sorted_playlists[:3]]
+        # Construire la requête principale avec randomisation
+        query = """
+        SELECT p.uri, p.nom, 
+               (COUNT(DISTINCT pmk.id_mot_cle) * 5 + COUNT(DISTINCT pg.id_genre) * 2 + RANDOM()) AS score
+        FROM playlist p
+        LEFT JOIN playlist_mot_cle pmk ON p.id_playlist = pmk.id_playlist
+        LEFT JOIN mot_cle mk ON pmk.id_mot_cle = mk.id_mot_cle
+        LEFT JOIN playlist_genre pg ON p.id_playlist = pg.id_playlist
+        LEFT JOIN genre g ON pg.id_genre = g.id_genre
+        WHERE (mk.id_mot_cle IN ({0}) OR g.id_genre IN ({1}))
+        {2}
+        GROUP BY p.uri, p.nom
+        ORDER BY score DESC
+        LIMIT 5
+        """.format(
+            ','.join(['?'] * len(keyword_ids)),
+            ','.join(['?'] * len(genre_ids)),
+            exclusion_clause
+        )
         
-        # Si des recommandations existent, prioritiser celles que l'utilisateur aime
-        elif base_recommendations:
-            # Créer un dictionnaire des URIs recommandées avec un score initial
-            enhanced_recommendations = {uri: 1 for uri in base_recommendations}
-            
-            # Augmenter le score des playlists écoutées précédemment
-            for uri, count in favorite_playlists:
-                if uri in enhanced_recommendations:
-                    enhanced_recommendations[uri] += count * 0.5
-            
-            # Augmenter davantage le score pour les interactions positives
-            for uri, count in positive_interactions:
-                if uri in enhanced_recommendations:
-                    enhanced_recommendations[uri] += count * 1.0
-            
-            # Trier les recommandations par score et conserver l'ordre
-            sorted_recommendations = sorted(
-                enhanced_recommendations.items(), 
-                key=lambda x: x[1], 
-                reverse=True
-            )
-            
-            # Retourner les URIs ordonnées
-            return [uri for uri, _ in sorted_recommendations]
+        # Exécuter la requête
+        params = keyword_ids + genre_ids + exclusion_params
+        cursor.execute(query, params)
+        playlists = cursor.fetchall()
         
+        # IMPORTANT: Vérifier que les résultats sont des playlists valides (pas des artistes)
+        valid_playlists = []
+        for uri, nom, score in playlists:
+            if uri.startswith('spotify:playlist:'):
+                valid_playlists.append((uri, nom, score))
+            else:
+                print(f"⚠️ URI non valide ignorée: {uri}")
+        
+        if valid_playlists:
+            # Ajouter un facteur aléatoire pour choisir parmi les meilleures options
+            import random
+            
+            # Si nous avons plusieurs résultats, prenons-en un au hasard parmi les meilleurs
+            if len(valid_playlists) > 1:
+                # 70% de chance de prendre la meilleure, 30% pour les autres
+                weights = [0.7] + [0.3 / (len(valid_playlists) - 1)] * (len(valid_playlists) - 1)
+                chosen = random.choices(valid_playlists, weights=weights, k=1)[0]
+            else:
+                chosen = valid_playlists[0]
+                
+            print(f"🎶 Playlist recommandée : {chosen[0]} (score: {chosen[2]})")
+            return [chosen[0]]
+        else:
+            # Aucune playlist valide trouvée, chercher n'importe quelle playlist valide
+            exclusion_str = ""
+            if recent_playlists:
+                placeholders = ','.join(['?'] * len(recent_playlists))
+                exclusion_str = f"WHERE uri NOT IN ({placeholders}) AND uri LIKE 'spotify:playlist:%'"
+            else:
+                exclusion_str = "WHERE uri LIKE 'spotify:playlist:%'"
+                
+            cursor.execute(f"SELECT uri FROM playlist {exclusion_str} ORDER BY RANDOM() LIMIT 1", 
+                         recent_playlists if recent_playlists else [])
+            result = cursor.fetchone()
+            
+            if result:
+                print(f"🎲 Playlist aléatoire : {result[0]}")
+                return [result[0]]
+            else:
+                # Vraiment aucune playlist valide, retourner une valeur par défaut connue
+                return ["spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"]  # Top 50 Mondial par défaut
+    
     except Exception as e:
-        print(f"❌ Erreur lors de l'amélioration des recommandations: {e}")
+        print(f"❌ Erreur recommendation: {e}")
+        # En cas d'erreur, retourner une playlist par défaut connue
+        return ["spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"]  # Top 50 Mondial par défaut
+        
     finally:
         conn.close()
     
-    # En cas d'erreur ou si aucune amélioration n'est possible, retourner les recommandations originales
-    return base_recommendations
+    return None
