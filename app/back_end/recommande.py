@@ -197,7 +197,7 @@ def get_playlist_from_phrase(user_id, phrase, keywords=None):
 
 # Mise à jour de get_enhanced_playlist_from_phrase pour accepter des mots-clés
 def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
-    """Récupère des playlists en fonction d'une phrase utilisateur, en tenant compte des goûts"""
+    """Récupère des playlists en fonction d'une phrase utilisateur"""
     
     # Extraction des mots-clés si non fournis
     keywords = extracted_keywords if extracted_keywords else extract_keywords(phrase)
@@ -213,112 +213,48 @@ def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
         keyword_ids = [row[0] for row in cursor.fetchall()]
         print(f"🔍 Requête avec id_mot_cle : {keyword_ids}")
         
-        # Si aucun mot-clé trouvé, prendre des mots-clés aléatoires
+        # Si aucun mot-clé trouvé, utiliser un mot-clé aléatoire
         if not keyword_ids:
-            cursor.execute("SELECT id_mot_cle FROM mot_cle ORDER BY RANDOM() LIMIT 3")
-            keyword_ids = [row[0] for row in cursor.fetchall()]
-            print(f"🎲 Mots-clés aléatoires: {keyword_ids}")
-        
-        # Récupérer les genres préférés de l'utilisateur
-        cursor.execute("SELECT id_genre FROM gout_utilisateur WHERE id_utilisateur = ?", (user_id,))
-        genre_ids = [row[0] for row in cursor.fetchall()]
-        print(f"🔍 Requête avec id_genre : {genre_ids}")
-        
-        # Si aucun genre trouvé, utiliser tous les genres
-        if not genre_ids:
-            cursor.execute("SELECT id_genre FROM genre")
-            genre_ids = [row[0] for row in cursor.fetchall()]
-        
-        # Récupérer les playlists récentes pour les exclure
-        cursor.execute("""
-            SELECT uri_playlist FROM historique_ecoute 
-            WHERE id_utilisateur = ? 
-            ORDER BY date_ecoute DESC LIMIT 5
-        """, (user_id,))
-        recent_playlists = [row[0] for row in cursor.fetchall()]
-        print(f"🔄 Playlists récentes à exclure: {recent_playlists}")
-        
-        # Construire la clause d'exclusion
-        exclusion_clause = ""
-        exclusion_params = []
-        if recent_playlists:
-            placeholders = ','.join(['?'] * len(recent_playlists))
-            exclusion_clause = f"AND p.uri NOT IN ({placeholders})"
-            exclusion_params = recent_playlists
-        
-        # Construire la requête principale avec randomisation
-        query = """
-        SELECT p.uri, p.nom, 
-               (COUNT(DISTINCT pmk.id_mot_cle) * 5 + COUNT(DISTINCT pg.id_genre) * 2 + RANDOM()) AS score
-        FROM playlist p
-        LEFT JOIN playlist_mot_cle pmk ON p.id_playlist = pmk.id_playlist
-        LEFT JOIN mot_cle mk ON pmk.id_mot_cle = mk.id_mot_cle
-        LEFT JOIN playlist_genre pg ON p.id_playlist = pg.id_playlist
-        LEFT JOIN genre g ON pg.id_genre = g.id_genre
-        WHERE (mk.id_mot_cle IN ({0}) OR g.id_genre IN ({1}))
-        {2}
-        GROUP BY p.uri, p.nom
-        ORDER BY score DESC
-        LIMIT 5
-        """.format(
-            ','.join(['?'] * len(keyword_ids)),
-            ','.join(['?'] * len(genre_ids)),
-            exclusion_clause
-        )
-        
-        # Exécuter la requête
-        params = keyword_ids + genre_ids + exclusion_params
-        cursor.execute(query, params)
-        playlists = cursor.fetchall()
-        
-        # IMPORTANT: Vérifier que les résultats sont des playlists valides (pas des artistes)
-        valid_playlists = []
-        for uri, nom, score in playlists:
-            if uri.startswith('spotify:playlist:'):
-                valid_playlists.append((uri, nom, score))
-            else:
-                print(f"⚠️ URI non valide ignorée: {uri}")
-        
-        if valid_playlists:
-            # Ajouter un facteur aléatoire pour choisir parmi les meilleures options
-            import random
-            
-            # Si nous avons plusieurs résultats, prenons-en un au hasard parmi les meilleurs
-            if len(valid_playlists) > 1:
-                # 70% de chance de prendre la meilleure, 30% pour les autres
-                weights = [0.7] + [0.3 / (len(valid_playlists) - 1)] * (len(valid_playlists) - 1)
-                chosen = random.choices(valid_playlists, weights=weights, k=1)[0]
-            else:
-                chosen = valid_playlists[0]
-                
-            print(f"🎶 Playlist recommandée : {chosen[0]} (score: {chosen[2]})")
-            return [chosen[0]]
-        else:
-            # Aucune playlist valide trouvée, chercher n'importe quelle playlist valide
-            exclusion_str = ""
-            if recent_playlists:
-                placeholders = ','.join(['?'] * len(recent_playlists))
-                exclusion_str = f"WHERE uri NOT IN ({placeholders}) AND uri LIKE 'spotify:playlist:%'"
-            else:
-                exclusion_str = "WHERE uri LIKE 'spotify:playlist:%'"
-                
-            cursor.execute(f"SELECT uri FROM playlist {exclusion_str} ORDER BY RANDOM() LIMIT 1", 
-                         recent_playlists if recent_playlists else [])
+            cursor.execute("SELECT id_mot_cle FROM mot_cle ORDER BY RANDOM() LIMIT 1")
             result = cursor.fetchone()
-            
+            if result:
+                keyword_ids = [result[0]]
+            else:
+                print("⚠️ Aucun mot-clé trouvé dans la base de données")
+                # Utiliser une playlist par défaut connue
+                return ["spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"]  # Top 50 Global
+        
+        # VERSION SIMPLIFIÉE: Trouver une playlist qui correspond à au moins un des mots-clés
+        query = """
+        SELECT DISTINCT p.uri 
+        FROM playlist p
+        JOIN playlist_mot_cle pmk ON p.id_playlist = pmk.id_playlist
+        WHERE pmk.id_mot_cle IN ({0})
+        ORDER BY RANDOM()
+        LIMIT 1
+        """.format(','.join(['?'] * len(keyword_ids)))
+        
+        cursor.execute(query, keyword_ids)
+        result = cursor.fetchone()
+        
+        if result:
+            print(f"🎶 Playlist recommandée : {result[0]}")
+            return [result[0]]
+        else:
+            # Aucune playlist trouvée avec ces mots-clés, prendre une playlist aléatoire
+            cursor.execute("SELECT uri FROM playlist ORDER BY RANDOM() LIMIT 1")
+            result = cursor.fetchone()
             if result:
                 print(f"🎲 Playlist aléatoire : {result[0]}")
                 return [result[0]]
             else:
-                # Vraiment aucune playlist valide, retourner une valeur par défaut connue
-                return ["spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"]  # Top 50 Mondial par défaut
+                # Aucune playlist dans la base, utiliser une playlist par défaut connue
+                return ["spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"]  # Top 50 Global
     
     except Exception as e:
         print(f"❌ Erreur recommendation: {e}")
         # En cas d'erreur, retourner une playlist par défaut connue
-        return ["spotify:playlist:37i9dQZF1DXcBWIGoYBM5M"]  # Top 50 Mondial par défaut
+        return ["spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"]  # Top 50 Global
         
     finally:
         conn.close()
-    
-    return None

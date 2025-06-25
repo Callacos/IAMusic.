@@ -28,7 +28,7 @@ def obtenir_appareil_actif(sp):
 # Fonction pour jouer une playlist
 def jouer_playlist(uri):
     """Lance la lecture d'une playlist sur le compte Spotify de l'utilisateur"""
-
+    
     # Playlist par défaut à utiliser si une erreur survient
     default_playlists = [
         "spotify:playlist:37i9dQZEVXbMDoHDwVN2tF",  # Top 50 Global
@@ -39,13 +39,8 @@ def jouer_playlist(uri):
     # Vérifier que l'URI est bien une playlist
     if not uri.startswith('spotify:playlist:'):
         print(f"❌ URI invalide pour jouer_playlist: {uri}")
-        # Si c'est un artiste, convertir en URI de playlist de l'artiste
-        if uri.startswith('spotify:artist:'):
-            artist_id = uri.split(':')[-1]
-            print(f"🔄 Conversion de l'URI artiste en playlist This Is...")
-            # Utiliser une playlist "This Is..." pour cet artiste
-            return jouer_playlist(f"spotify:playlist:37i9dQZF1DXcBWIGoYBM5M")  # Playlist par défaut
-        return False
+        import random
+        return jouer_playlist(random.choice(default_playlists))
     
     try:
         # Récupérer le token valide
@@ -53,37 +48,67 @@ def jouer_playlist(uri):
         if not token:
             print("❌ Pas de token valide pour jouer la playlist")
             return False
-            
-        # Ce bloc doit être indenté correctement (au même niveau que le try ci-dessus)
+        
         user_id = session.get('user_id')
-        if user_id:
-            try:
-                # Récupérer les infos de la playlist
-                sp = get_spotify_for_user(user_id)
-                if sp:
-                    playlist_data = sp.playlist(uri.split(':')[-1])
-                    playlist_nom = playlist_data.get('name', 'Playlist inconnue')
+        if not user_id:
+            print("❌ Utilisateur non connecté")
+            return False
+            
+        # Récupérer les infos de la playlist
+        sp = get_spotify_for_user(user_id)
+        if not sp:
+            print("❌ Impossible d'obtenir l'instance Spotify")
+            return False
+            
+        try:
+            # Vérifier si la playlist existe
+            playlist_data = sp.playlist(uri.split(':')[-1])
+            playlist_nom = playlist_data.get('name', 'Playlist inconnue')
+        except Exception as e:
+            print(f"❌ Erreur playlist: {e}")
+            import random
+            return jouer_playlist(random.choice(default_playlists))
+            
+        # Enregistrer l'écoute si tout est OK
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Récupérer l'ID utilisateur
+            cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_id,))
+            result = cursor.fetchone()
+            if result:
+                id_utilisateur = result[0]
+                
+                # Vérifier la structure de la table
+                try:
+                    cursor.execute(
+                        "INSERT INTO historique_ecoute (id_utilisateur, uri_playlist, date_ecoute) VALUES (?, ?, datetime('now'))",
+                        (id_utilisateur, uri)
+                    )
+                except:
+                    # Essayer l'autre format de colonne
+                    cursor.execute(
+                        "INSERT INTO historique_ecoute (id_utilisateur, playlist_uri, playlist_nom) VALUES (?, ?, ?)",
+                        (id_utilisateur, uri, playlist_nom)
+                    )
                     
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    
-                    # Récupérer l'ID utilisateur
-                    cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_id,))
-                    result = cursor.fetchone()
-                    if result:
-                        id_utilisateur = result[0]
-                        
-                        # Enregistrer l'écoute
-                        cursor.execute(
-                            "INSERT INTO historique_ecoute (id_utilisateur, playlist_uri, playlist_nom) VALUES (?, ?, ?)",
-                            (id_utilisateur, uri, playlist_nom)
-                        )
-                        conn.commit()
-                        print(f"✅ Écoute enregistrée dans l'historique pour l'utilisateur {id_utilisateur}")
-                    conn.close()
-            except Exception as e:
-                print(f"❌ Erreur lors de l'enregistrement de l'écoute: {e}")
-                return False
+                conn.commit()
+                print(f"✅ Écoute enregistrée dans l'historique pour l'utilisateur {id_utilisateur}")
+            conn.close()
+        except Exception as e:
+            print(f"❌ Erreur DB: {e}")
+            
+        # Démarrer la lecture
+        try:
+            sp.start_playback(context_uri=uri)
+            print(f"✅ Lecture lancée : {uri}")
+            return True
+        except Exception as e:
+            print(f"❌ Erreur lecture: {e}")
+            return False
+            
     except Exception as e:
-        print(f"❌ Erreur lors de la lecture de la playlist: {e}")
-        return False
+        print(f"❌ Erreur générale: {e}")
+        import random
+        return jouer_playlist(random.choice(default_playlists))
