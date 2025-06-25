@@ -28,6 +28,13 @@ def obtenir_appareil_actif(sp):
 # Fonction pour jouer une playlist
 def jouer_playlist(uri):
     """Lance la lecture d'une playlist sur le compte Spotify de l'utilisateur"""
+
+    # Playlist par défaut à utiliser si une erreur survient
+    default_playlists = [
+        "spotify:playlist:37i9dQZEVXbMDoHDwVN2tF",  # Top 50 Global
+        "spotify:playlist:37i9dQZF1DXcF6B6QPhFDv",  # Today's Top Hits
+        "spotify:playlist:37i9dQZF1DX0XUsuxWHRQd"   # RapCaviar
+    ]
     
     # Vérifier que l'URI est bien une playlist
     if not uri.startswith('spotify:playlist:'):

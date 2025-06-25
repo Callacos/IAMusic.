@@ -220,7 +220,7 @@ def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
             print(f"🎲 Mots-clés aléatoires: {keyword_ids}")
         
         # Récupérer les genres préférés de l'utilisateur
-        cursor.execute("SELECT id_genre FROM gouts_utilisateur WHERE id_utilisateur = ?", (user_id,))
+        cursor.execute("SELECT id_genre FROM gout_utilisateur WHERE id_utilisateur = ?", (user_id,))
         genre_ids = [row[0] for row in cursor.fetchall()]
         print(f"🔍 Requête avec id_genre : {genre_ids}")
         
