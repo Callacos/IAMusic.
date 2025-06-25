@@ -10,7 +10,7 @@ from spotify_auth  import get_spotify_oauth_for_user
 sp_oauth = SpotifyOAuth(
     client_id=os.getenv("SPOTIPY_CLIENT_ID"),
     client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
-    redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "http://127.0.0.1:5000/callback"),
+    redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI", "https://iamusic.onrender.com/callback"),
     scope = "user-read-playback-state user-modify-playback-state user-read-private"
 
 )
