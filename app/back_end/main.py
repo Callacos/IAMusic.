@@ -31,10 +31,11 @@ from flask import session, redirect, url_for
 from flask_login import current_user, login_required
 from flask import Flask, render_template, request
 import nltk
-from dotenv import load_dotenv
 
-load_dotenv()
-
+# Ne charge .env que si on est en local (pas sur Render)
+if os.getenv("RENDER") != "true":
+    from dotenv import load_dotenv
+    load_dotenv()
 
 
 
