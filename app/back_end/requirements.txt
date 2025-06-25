@@ -137,3 +137,4 @@ wheel==0.42.0
 wrapt==1.17.2
 xdg==5
 xkit==0.0.0
+gunicorn==21.2.0
