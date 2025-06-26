@@ -27,17 +27,30 @@ def obtenir_appareil_actif(sp):
 
 # Fonction pour jouer une playlist
 def jouer_playlist(uri):
-    """Lance la lecture d'une playlist sur le compte Spotify de l'utilisateur"""
+    """Lance la lecture d'une playlist, d'un artiste ou d'un album sur Spotify"""
     
-    # Vérifier que l'URI est bien une playlist
-    if not uri.startswith('spotify:playlist:'):
+    # Vérifier le type d'URI
+    valid_uri_types = {
+        'spotify:playlist:': 'playlist',
+        'spotify:artist:': 'artist', 
+        'spotify:album:': 'album',
+        'spotify:track:': 'track'
+    }
+    
+    uri_type = None
+    for prefix, type_name in valid_uri_types.items():
+        if uri.startswith(prefix):
+            uri_type = type_name
+            break
+    
+    if not uri_type:
         print(f"❌ URI invalide pour jouer_playlist: {uri}")
         return False
     
     # Récupérer le token valide
     token = get_valid_spotify_token()
     if not token:
-        print("❌ Pas de token valide pour jouer la playlist")
+        print("❌ Pas de token valide pour jouer")
         return False
     
     user_id = session.get('user_id')
@@ -45,33 +58,49 @@ def jouer_playlist(uri):
         print("❌ Utilisateur non connecté")
         return False
         
-    # Récupérer les infos de la playlist
+    # Récupérer l'instance Spotify
     sp = get_spotify_for_user(user_id)
     if not sp:
         print("❌ Impossible d'obtenir l'instance Spotify")
         return False
         
-    # 1. D'abord lancer la lecture sans vérifier l'existence
+    # 1. D'abord lancer la lecture selon le type d'URI
     try:
-        sp.start_playback(context_uri=uri)
+        if uri_type == 'track':
+            # Pour les pistes, utiliser uris au lieu de context_uri
+            sp.start_playback(uris=[uri])
+        else:
+            # Pour les playlists, artistes et albums, utiliser context_uri
+            sp.start_playback(context_uri=uri)
+            
         print(f"✅ Lecture lancée : {uri}")
         lecture_ok = True
     except Exception as e:
         print(f"❌ Erreur lecture: {e}")
         return False
     
-    # 2. Ensuite, essayer d'enregistrer dans l'historique, même si les détails ne sont pas disponibles
+    # 2. Ensuite, essayer d'enregistrer dans l'historique
     try:
-        # Extraire l'ID de la playlist depuis l'URI
-        playlist_id = uri.split(':')[-1]
+        # Extraire l'ID depuis l'URI
+        entity_id = uri.split(':')[-1]
         
-        # Tenter de récupérer les infos de la playlist, mais ne pas bloquer si ça échoue
+        # Tenter de récupérer les infos, selon le type d'URI
         try:
-            playlist_data = sp.playlist(playlist_id)
-            playlist_nom = playlist_data.get('name', 'Playlist inconnue')
+            if uri_type == "playlist":
+                data = sp.playlist(entity_id)
+                nom = data.get('name', 'Playlist inconnue')
+            elif uri_type == "artist":
+                data = sp.artist(entity_id)
+                nom = data.get('name', 'Artiste inconnu')
+            elif uri_type == "album":
+                data = sp.album(entity_id)
+                nom = data.get('name', 'Album inconnu')
+            elif uri_type == "track":
+                data = sp.track(entity_id)
+                nom = data.get('name', 'Titre inconnu')
         except Exception as e:
-            print(f"⚠️ Impossible de récupérer les détails de la playlist: {e}")
-            playlist_nom = "Playlist inconnue"  # Valeur par défaut si on ne peut pas récupérer le nom
+            print(f"⚠️ Impossible de récupérer les détails: {e}")
+            nom = f"{uri_type.capitalize()} inconnu"
         
         # Enregistrer l'écoute dans l'historique
         conn = get_db_connection()
@@ -86,16 +115,14 @@ def jouer_playlist(uri):
             # Enregistrer l'écoute
             cursor.execute(
                 "INSERT INTO historique_ecoute (id_utilisateur, playlist_uri, playlist_nom) VALUES (?, ?, ?)",
-                (id_utilisateur, uri, playlist_nom)
+                (id_utilisateur, uri, nom)
             )
             conn.commit()
             print(f"✅ Écoute enregistrée dans l'historique pour l'utilisateur {id_utilisateur}")
         conn.close()
         
-        # La lecture a déjà été lancée, retourner vrai
         return lecture_ok
         
     except Exception as e:
-        print(f"❌ Erreur lors de l'enregistrement de l'écoute: {e}")
-        # Même s'il y a une erreur dans l'enregistrement, la lecture a bien été lancée
+        print(f"❌ Erreur lors de l'enregistrement: {e}")
         return lecture_ok

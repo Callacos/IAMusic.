@@ -203,13 +203,42 @@ synonym_map = {
 }
 
 def normalize_keywords(keywords):
-    """Lemmatisation et synonymes manuels"""
-    lemmatized = []
-    for k in keywords:
-        word = k.strip().lower()
-        if len(word) <= 2:
-         continue
-    lemma = lemmatizer.lemmatize(word, pos='v')
-    lemmatized.append(lemma if lemma else word)
-    normalized = [synonym_map.get(k, k) for k in lemmatized]
-    return list(dict.fromkeys(normalized))[:3]
+    """
+    Normalise les mots-clés en utilisant:
+    1. La lemmatisation pour réduire les mots à leur forme de base
+    2. Un dictionnaire de synonymes pour unifier les termes similaires
+    """
+    normalized = []
+    
+    for keyword in keywords:
+        # Convertir en minuscules et retirer les espaces
+        keyword = keyword.lower().strip()
+        
+        # Lemmatiser le mot (si possible)
+        try:
+            # Lemmatiser chaque mot dans le mot-clé (qui peut être une expression)
+            words = keyword.split()
+            lemmatized_words = [lemmatizer.lemmatize(word) for word in words]
+            lemmatized_keyword = " ".join(lemmatized_words)
+        except Exception as e:
+            print(f"⚠️ Erreur lors de la lemmatisation: {e}")
+            lemmatized_keyword = keyword
+        
+        # Appliquer le dictionnaire de synonymes
+        # D'abord vérifier le mot-clé lemmatisé
+        if lemmatized_keyword in synonym_map:
+            normalized.append(synonym_map[lemmatized_keyword])
+        # Sinon vérifier le mot-clé original
+        elif keyword in synonym_map:
+            normalized.append(synonym_map[keyword])
+        # Si aucun synonyme n'est trouvé, utiliser la version lemmatisée
+        else:
+            normalized.append(lemmatized_keyword)
+    
+    # Éliminer les doublons tout en préservant l'ordre
+    unique_normalized = []
+    for kw in normalized:
+        if kw not in unique_normalized:
+            unique_normalized.append(kw)
+    
+    return unique_normalized
