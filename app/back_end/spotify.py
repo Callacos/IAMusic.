@@ -27,41 +27,35 @@ def obtenir_appareil_actif(sp):
 
 # Fonction pour jouer une playlist
 def jouer_playlist(uri):
-    """Lance la lecture d'une playlist sur le compte Spotify de l'utilisateur"""
-    
-    # Empêcher les appels récursifs infinis
-    max_attempts = 1  # Pas de récursion
-    
-    # Vérifier que l'URI est bien une playlist
-    if not uri.startswith('spotify:playlist:'):
-        print(f"❌ URI invalide pour jouer_playlist: {uri}")
-        return False
-    
+    if not uri:
+        print("❌ URI de playlist invalide.")
+        return
+
+    sp = get_spotify_client()
+    if not sp:
+        return
+
+    device_id = obtenir_appareil_actif(sp)
+    if not device_id:
+        return
+
     try:
-        # Récupérer le token valide
-        token = get_valid_spotify_token()
-        if not token:
-            print("❌ Pas de token valide pour jouer la playlist")
-            return False
-        
-        user_id = session.get('user_id')
-        if not user_id:
-            print("❌ Utilisateur non connecté")
-            return False
-            
-        # Récupérer les infos de la playlist
-        sp = get_spotify_for_user(user_id)
-        if not sp:
-            print("❌ Impossible d'obtenir l'instance Spotify")
-            return False
-        
-        # Bypass la vérification de l'existence de la playlist et essayer de jouer directement
+        sp.transfer_playback(device_id=device_id, force_play=True)
+        sp.start_playback(context_uri=uri)
+        print(f"✅ Lecture lancée : {uri}")
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la lecture : {e}")
+
+    # Ce bloc doit être indenté correctement (au même niveau que le try ci-dessus)
+    user_id = session.get('user_id')
+    if user_id:
         try:
-            sp.start_playback(context_uri=uri)
-            print(f"✅ Lecture lancée : {uri}")
-            
-            # Enregistrer l'écoute
-            try:
+            # Récupérer les infos de la playlist
+            sp = get_spotify_for_user(user_id)
+            if sp:
+                playlist_data = sp.playlist(uri.split(':')[-1])
+                playlist_nom = playlist_data.get('name', 'Playlist inconnue')
+                
                 conn = get_db_connection()
                 cursor = conn.cursor()
                 
@@ -70,22 +64,14 @@ def jouer_playlist(uri):
                 result = cursor.fetchone()
                 if result:
                     id_utilisateur = result[0]
+                    
+                    # Enregistrer l'écoute
                     cursor.execute(
-                        "INSERT INTO historique_ecoute (id_utilisateur, uri_playlist, date_ecoute) VALUES (?, ?, datetime('now'))",
-                        (id_utilisateur, uri)
+                        "INSERT INTO historique_ecoute (id_utilisateur, playlist_uri, playlist_nom) VALUES (?, ?, ?)",
+                        (id_utilisateur, uri, playlist_nom)
                     )
                     conn.commit()
                     print(f"✅ Écoute enregistrée dans l'historique pour l'utilisateur {id_utilisateur}")
                 conn.close()
-            except Exception as e:
-                print(f"❌ Erreur DB: {e}")
-                
-            return True
         except Exception as e:
-            print(f"❌ Erreur lecture: {e}")
-            # Ne PAS rappeler jouer_playlist récursivement ici
-            return False
-            
-    except Exception as e:
-        print(f"❌ Erreur générale: {e}")
-        return False
+            print(f"❌ Erreur lors de l'enregistrement de l'écoute: {e}")

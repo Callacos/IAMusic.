@@ -102,19 +102,7 @@ def extract_keywords(phrase):
 
     return found[:3] if found else extract_keywords_traditional(phrase)
 
-def get_simplified_playlist():
-    """Retourne une playlist populaire connue qui devrait fonctionner"""
-    # Liste de playlists populaires maintenues par Spotify qui devraient exister longtemps
-    playlists = [
-        "spotify:playlist:37i9dQZF1DX7ZUug1ANKRP",  # Main Pop
-        "spotify:playlist:37i9dQZF1DX10zKzsJ2jva",  # Todays Top Hits
-        "spotify:playlist:37i9dQZF1DX4JAvHpjipBk",  # New Music Friday
-        "spotify:playlist:37i9dQZF1DX4o1oenSJRJd",  # All Out 2000s
-        "spotify:playlist:37i9dQZF1DX6aTaZa0K6VA"   # Chill Hits
-    ]
-    
-    import random
-    return random.choice(playlists)
+
 
 # Mise à jour de la fonction get_playlist_from_phrase pour utiliser les mots-clés
 def get_playlist_from_phrase(user_id, phrase, keywords=None):
@@ -181,69 +169,88 @@ def get_playlist_from_phrase(user_id, phrase, keywords=None):
         if conn:
             conn.close()
 
-
-
 # Mise à jour de get_enhanced_playlist_from_phrase pour accepter des mots-clés
-def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
-    """Récupère des playlists en fonction d'une phrase utilisateur"""
+def get_enhanced_playlist_from_phrase(user_id, phrase, keywords=None):
+    # Récupérer les recommandations de base avec les mots-clés (si fournis)
+    base_recommendations = get_playlist_from_phrase(user_id, phrase, keywords)
     
-    # Extraction des mots-clés si non fournis
-    keywords = extracted_keywords if extracted_keywords else extract_keywords(phrase)
-    print(f"🔑 Mots-clés extraits : {keywords}")
+    # Le reste de la fonction reste inchangé
+    # ...
     
+    # Analyser l'historique pour affiner les recommandations
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # Récupérer les ID des mots-clés
-        placeholders = ','.join(['?'] * len(keywords))
-        cursor.execute(f"SELECT id_mot_cle FROM mot_cle WHERE mot IN ({placeholders})", keywords)
-        keyword_ids = [row[0] for row in cursor.fetchall()]
-        print(f"🔍 Requête avec id_mot_cle : {keyword_ids}")
+        # Récupérer les playlists les plus écoutées
+        cursor.execute("""
+            SELECT playlist_uri, COUNT(*) as count 
+            FROM historique_ecoute 
+            WHERE id_utilisateur = ? 
+            GROUP BY playlist_uri 
+            ORDER BY count DESC 
+            LIMIT 5
+        """, (user_id,))
+        favorite_playlists = cursor.fetchall()
         
-        # Si aucun mot-clé trouvé, utiliser un mot-clé aléatoire
-        if not keyword_ids:
-            cursor.execute("SELECT id_mot_cle FROM mot_cle ORDER BY RANDOM() LIMIT 1")
-            result = cursor.fetchone()
-            if result:
-                keyword_ids = [result[0]]
-            else:
-                print("⚠️ Aucun mot-clé trouvé dans la base de données")
-                return [get_simplified_playlist()]
+        # Analyser les interactions positives
+        cursor.execute("""
+            SELECT playlist_uri, COUNT(*) as interactions
+            FROM interactions
+            WHERE id_utilisateur = ? AND type_interaction != 'skip'
+            GROUP BY playlist_uri
+            ORDER BY interactions DESC
+            LIMIT 5
+        """, (user_id,))
+        positive_interactions = cursor.fetchall()
         
-        # VERSION ADAPTÉE: Trouver une playlist qui correspond à au moins un des mots-clés
-        # en respectant votre structure de base de données
-        query = """
-        SELECT DISTINCT p.uri 
-        FROM playlist p
-        JOIN association a ON p.id_association = a.id_association
-        WHERE a.id_mot_cle IN ({0})
-        ORDER BY RANDOM()
-        LIMIT 1
-        """.format(','.join(['?'] * len(keyword_ids)))
+        # Si aucune recommandation de base, utiliser les favorites directement
+        if not base_recommendations and (favorite_playlists or positive_interactions):
+            # Combiner les playlists favorites et interactions positives
+            combined_playlists = {}
+            
+            # Ajouter poids des playlists écoutées
+            for uri, count in favorite_playlists:
+                combined_playlists[uri] = count
+            
+            # Ajouter poids des interactions positives (avec plus de valeur)
+            for uri, count in positive_interactions:
+                if uri in combined_playlists:
+                    combined_playlists[uri] += count * 1.5  # Bonus pour interactions positives
+                else:
+                    combined_playlists[uri] = count * 1.5
+            
+            # Trier par score et prendre les 3 meilleures
+            sorted_playlists = sorted(combined_playlists.items(), key=lambda x: x[1], reverse=True)
+            return [uri for uri, _ in sorted_playlists[:3]]
         
-        cursor.execute(query, keyword_ids)
-        result = cursor.fetchone()
+        # Si des recommandations existent, prioritiser celles que l'utilisateur aime
+        elif base_recommendations:
+            # Créer un dictionnaire des URIs recommandées avec un score initial
+            enhanced_recommendations = {uri: 1 for uri in base_recommendations}
+            
+            # Augmenter le score des playlists écoutées précédemment
+            for uri, count in favorite_playlists:
+                if uri in enhanced_recommendations:
+                    enhanced_recommendations[uri] += count * 0.5
+            
+            # Augmenter davantage le score pour les interactions positives
+            for uri, count in positive_interactions:
+                if uri in enhanced_recommendations:
+                    enhanced_recommendations[uri] += count * 1.0
+            
+            # Trier les recommandations par score et conserver l'ordre
+            sorted_recommendations = sorted(
+                enhanced_recommendations.items(), 
+                key=lambda x: x[1], 
+                reverse=True
+            )
+            
+            # Retourner les URIs ordonnées
+            return [uri for uri, _ in sorted_recommendations]
         
-        if result:
-            print(f"🎶 Playlist recommandée : {result[0]}")
-            return [result[0]]
-        else:
-            # Aucune playlist trouvée avec ces mots-clés, prendre une playlist aléatoire
-            cursor.execute("SELECT uri FROM playlist ORDER BY RANDOM() LIMIT 1")
-            result = cursor.fetchone()
-            if result:
-                print(f"🎲 Playlist aléatoire : {result[0]}")
-                return [result[0]]
-            else:
-                # Aucune playlist dans la base, utiliser une playlist connue
-                return [get_simplified_playlist()]
-    
     except Exception as e:
-        print(f"❌ Erreur recommendation: {e}")
-        # En cas d'erreur, retourner une playlist par défaut connue
-        return [get_simplified_playlist()]
-        
+        print(f"❌ Erreur lors de l'amélioration des recommandations: {e}")
     finally:
         conn.close()
     
