@@ -916,6 +916,26 @@ def test_direct():
         return f"Erreur: {str(e)}"
     
     
+@app.route('/test-spotify')
+def test_spotify():
+    if 'user_id' not in session:
+        return "Non connecté"
+    
+    sp = get_spotify_for_user(session['user_id'])
+    if not sp:
+        return "Impossible d'obtenir l'instance Spotify"
+    
+    try:
+        # Test simple: recherche
+        results = sp.search(q="test", limit=1)
+        if results:
+            return f"API Spotify OK, résultat: {results['tracks']['items'][0]['name'] if 'tracks' in results and 'items' in results['tracks'] and results['tracks']['items'] else 'Aucun résultat'}"
+        else:
+            return "API Spotify OK mais aucun résultat"
+    except Exception as e:
+        return f"Erreur API Spotify: {str(e)}"
+    
+
 if __name__ == '__main__':
     # Change ici si tu veux tester localement en ligne de commande ou lancer le serveur
     # main()  # ← Décommente pour tester en CLI

@@ -29,18 +29,13 @@ def obtenir_appareil_actif(sp):
 def jouer_playlist(uri):
     """Lance la lecture d'une playlist sur le compte Spotify de l'utilisateur"""
     
-    # Playlist par défaut à utiliser si une erreur survient
-    default_playlists = [
-        "spotify:playlist:37i9dQZEVXbMDoHDwVN2tF",  # Top 50 Global
-        "spotify:playlist:37i9dQZF1DXcF6B6QPhFDv",  # Today's Top Hits
-        "spotify:playlist:37i9dQZF1DX0XUsuxWHRQd"   # RapCaviar
-    ]
+    # Empêcher les appels récursifs infinis
+    max_attempts = 1  # Pas de récursion
     
     # Vérifier que l'URI est bien une playlist
     if not uri.startswith('spotify:playlist:'):
         print(f"❌ URI invalide pour jouer_playlist: {uri}")
-        import random
-        return jouer_playlist(random.choice(default_playlists))
+        return False
     
     try:
         # Récupérer le token valide
@@ -59,56 +54,38 @@ def jouer_playlist(uri):
         if not sp:
             print("❌ Impossible d'obtenir l'instance Spotify")
             return False
-            
+        
+        # Bypass la vérification de l'existence de la playlist et essayer de jouer directement
         try:
-            # Vérifier si la playlist existe
-            playlist_data = sp.playlist(uri.split(':')[-1])
-            playlist_nom = playlist_data.get('name', 'Playlist inconnue')
-        except Exception as e:
-            print(f"❌ Erreur playlist: {e}")
-            import random
-            return jouer_playlist(random.choice(default_playlists))
+            sp.start_playback(context_uri=uri)
+            print(f"✅ Lecture lancée : {uri}")
             
-        # Enregistrer l'écoute si tout est OK
-        try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            
-            # Récupérer l'ID utilisateur
-            cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_id,))
-            result = cursor.fetchone()
-            if result:
-                id_utilisateur = result[0]
+            # Enregistrer l'écoute
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
                 
-                # Vérifier la structure de la table
-                try:
+                # Récupérer l'ID utilisateur
+                cursor.execute("SELECT id_utilisateur FROM utilisateur WHERE nom = ?", (user_id,))
+                result = cursor.fetchone()
+                if result:
+                    id_utilisateur = result[0]
                     cursor.execute(
                         "INSERT INTO historique_ecoute (id_utilisateur, uri_playlist, date_ecoute) VALUES (?, ?, datetime('now'))",
                         (id_utilisateur, uri)
                     )
-                except:
-                    # Essayer l'autre format de colonne
-                    cursor.execute(
-                        "INSERT INTO historique_ecoute (id_utilisateur, playlist_uri, playlist_nom) VALUES (?, ?, ?)",
-                        (id_utilisateur, uri, playlist_nom)
-                    )
-                    
-                conn.commit()
-                print(f"✅ Écoute enregistrée dans l'historique pour l'utilisateur {id_utilisateur}")
-            conn.close()
-        except Exception as e:
-            print(f"❌ Erreur DB: {e}")
-            
-        # Démarrer la lecture
-        try:
-            sp.start_playback(context_uri=uri)
-            print(f"✅ Lecture lancée : {uri}")
+                    conn.commit()
+                    print(f"✅ Écoute enregistrée dans l'historique pour l'utilisateur {id_utilisateur}")
+                conn.close()
+            except Exception as e:
+                print(f"❌ Erreur DB: {e}")
+                
             return True
         except Exception as e:
             print(f"❌ Erreur lecture: {e}")
+            # Ne PAS rappeler jouer_playlist récursivement ici
             return False
             
     except Exception as e:
         print(f"❌ Erreur générale: {e}")
-        import random
-        return jouer_playlist(random.choice(default_playlists))
+        return False
