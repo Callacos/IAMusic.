@@ -891,6 +891,31 @@ def test_phrase():
     </html>
     """)
 
+
+@app.route('/test-direct')
+def test_direct():
+    """Route de test qui contourne la recommandation normale pour jouer directement une playlist connue"""
+    
+    # Utilisez une playlist personnelle que vous avez créée vous-même
+    # ou une playlist très populaire qui a peu de chances d'avoir été supprimée
+    playlist_uri = "spotify:playlist:37i9dQZF1DX7ZUug1ANKRP"  # Playlist "Main Pop"
+    
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return "Pas d'utilisateur connecté"
+            
+        sp = get_spotify_for_user(user_id)
+        if not sp:
+            return "Impossible d'obtenir l'instance Spotify"
+            
+        # Tenter de jouer directement sans vérifier l'existence
+        sp.start_playback(context_uri=playlist_uri)
+        return f"Lecture directe de {playlist_uri}"
+    except Exception as e:
+        return f"Erreur: {str(e)}"
+    
+    
 if __name__ == '__main__':
     # Change ici si tu veux tester localement en ligne de commande ou lancer le serveur
     # main()  # ← Décommente pour tester en CLI
