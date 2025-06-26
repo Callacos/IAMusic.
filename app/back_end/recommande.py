@@ -6,82 +6,56 @@ from text_analyzer import extract_keywords_with_ollama
 from text_analyzer import normalize_keywords
 from config import USE_IA 
 from recommande import normalize_keywords 
-from nltk.stem import WordNetLemmatizer
-
-# Initialize lemmatizer
-lemmatizer = WordNetLemmatizer()
-
-# Dictionary mapping of synonyms
-synonym_map = {
-    # Example entries (replace with your actual synonyms)
-    'happy': 'joyeux',
-    'sad': 'triste',
-    'angry': 'en colère',
-    'relaxed': 'relax'
-    # Add more synonyms as needed
-}
-
 # Fonction d'extraction de mots-clés traditionnelle (votre méthode actuelle)
 def extract_keywords_traditional(phrase):
-    """Extraits des mots-clés d'une phrase en utilisant la base de données et les synonymes"""
+    """
+    Extrait les mots-clés d'une phrase en recherchant dans la base de données des mots-clés.
+    Gère les expressions entières (ex : 'depeche mode') avant les mots isolés.
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        # Vérifier d'abord dans la map de synonymes
-        phrase_lower = phrase.lower()
-        
-        # Nouvelle étape: vérifier les variations par lemmatisation
-        try:
-            lemmatized_phrase = lemmatizer.lemmatize(phrase_lower, pos='v')
-            if lemmatized_phrase != phrase_lower:
-                print(f"🔄 Phrase lemmatisée: '{phrase_lower}' → '{lemmatized_phrase}'")
-                # Vérifier si la version lemmatisée est dans les synonymes
-                if lemmatized_phrase in synonym_map:
-                    return [synonym_map[lemmatized_phrase]]
-        except:
-            pass
-            
-        # Vérifier la phrase directement dans les synonymes
-        if phrase_lower in synonym_map:
-            print(f"🔍 Synonyme trouvé: '{phrase_lower}' → '{synonym_map[phrase_lower]}'")
-            return [synonym_map[phrase_lower]]
-            
         # Récupérer tous les mots-clés de la base de données
         cursor.execute("SELECT mot FROM mot_cle")
         all_keywords = [row[0].lower() for row in cursor.fetchall()]
 
-        # Chercher les expressions entières d'abord
+        # Mettre la phrase en minuscules
+        phrase_lower = phrase.lower()
+
+        # Chercher les expressions entières d'abord (ex: "depeche mode")
         found_keywords = []
         for keyword in all_keywords:
             if keyword in phrase_lower:
                 found_keywords.append(keyword)
 
-        # Supprimer les doublons imbriqués
+        # Supprimer les doublons imbriqués (ex: "mode" dans "depeche mode")
         filtered_keywords = []
         for kw in sorted(found_keywords, key=len, reverse=True):
-            if not any(kw in longer_kw and kw != longer_kw for longer_kw in filtered_keywords):
+            if not any(kw in longer_kw for longer_kw in filtered_keywords):
                 filtered_keywords.append(kw)
 
-        # Si aucun mot-clé trouvé, générer des mots-clés aléatoires
-        if not filtered_keywords:
-            print("ℹ️ Aucun mot-clé trouvé, sélection aléatoire")
+        found_keywords = normalize_keywords(filtered_keywords)
+
+        print(f"🔍 Tokens normalisés : {found_keywords}")
+        print(f"Mots-clés trouvés dans la BD: {found_keywords}")
+
+        # Si aucun mot-clé trouvé, on prend 3 aléatoires existants
+        if not found_keywords:
             cursor.execute("SELECT mot FROM mot_cle ORDER BY RANDOM() LIMIT 3")
-            random_keywords = [row[0].lower() for row in cursor.fetchall()]
-            if random_keywords:
-                print(f"🎲 Mots-clés aléatoires: {random_keywords}")
-                return random_keywords
-            else:
-                return ['relax', 'moderne', 'populaire']  # Fallback si la BD est vide
-                
-        return filtered_keywords
+            default_keywords = [row[0] for row in cursor.fetchall()]
+            print(f"Utilisation de mots-clés par défaut: {default_keywords}")
+            return default_keywords
+
+        return found_keywords[:3]
 
     except Exception as e:
         print(f"Erreur lors de l'extraction des mots-clés: {e}")
-        return ['relax', 'moderne', 'populaire']  # Mots-clés par défaut
+        return ['relax', 'moderne', 'populaire']
 
     finally:
         conn.close()
+
 
 # Fonction unifiée d'extraction de mots-clés
 from text_analyzer import extract_keywords_with_ollama
@@ -128,7 +102,19 @@ def extract_keywords(phrase):
 
     return found[:3] if found else extract_keywords_traditional(phrase)
 
-
+def get_simplified_playlist():
+    """Retourne une playlist populaire connue qui devrait fonctionner"""
+    # Liste de playlists populaires maintenues par Spotify qui devraient exister longtemps
+    playlists = [
+        "spotify:playlist:37i9dQZF1DX7ZUug1ANKRP",  # Main Pop
+        "spotify:playlist:37i9dQZF1DX10zKzsJ2jva",  # Todays Top Hits
+        "spotify:playlist:37i9dQZF1DX4JAvHpjipBk",  # New Music Friday
+        "spotify:playlist:37i9dQZF1DX4o1oenSJRJd",  # All Out 2000s
+        "spotify:playlist:37i9dQZF1DX6aTaZa0K6VA"   # Chill Hits
+    ]
+    
+    import random
+    return random.choice(playlists)
 
 # Mise à jour de la fonction get_playlist_from_phrase pour utiliser les mots-clés
 def get_playlist_from_phrase(user_id, phrase, keywords=None):
@@ -195,6 +181,8 @@ def get_playlist_from_phrase(user_id, phrase, keywords=None):
         if conn:
             conn.close()
 
+
+
 # Mise à jour de get_enhanced_playlist_from_phrase pour accepter des mots-clés
 def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
     """Récupère des playlists en fonction d'une phrase utilisateur"""
@@ -221,15 +209,15 @@ def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
                 keyword_ids = [result[0]]
             else:
                 print("⚠️ Aucun mot-clé trouvé dans la base de données")
-                # Utiliser une playlist par défaut connue
-                return ["spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"]  # Top 50 Global
+                return [get_simplified_playlist()]
         
-        # VERSION SIMPLIFIÉE: Trouver une playlist qui correspond à au moins un des mots-clés
+        # VERSION ADAPTÉE: Trouver une playlist qui correspond à au moins un des mots-clés
+        # en respectant votre structure de base de données
         query = """
         SELECT DISTINCT p.uri 
         FROM playlist p
-        JOIN playlist_mot_cle pmk ON p.id_playlist = pmk.id_playlist
-        WHERE pmk.id_mot_cle IN ({0})
+        JOIN association a ON p.id_association = a.id_association
+        WHERE a.id_mot_cle IN ({0})
         ORDER BY RANDOM()
         LIMIT 1
         """.format(','.join(['?'] * len(keyword_ids)))
@@ -248,13 +236,16 @@ def get_enhanced_playlist_from_phrase(user_id, phrase, extracted_keywords=None):
                 print(f"🎲 Playlist aléatoire : {result[0]}")
                 return [result[0]]
             else:
-                # Aucune playlist dans la base, utiliser une playlist par défaut connue
-                return ["spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"]  # Top 50 Global
+                # Aucune playlist dans la base, utiliser une playlist connue
+                return [get_simplified_playlist()]
     
     except Exception as e:
         print(f"❌ Erreur recommendation: {e}")
         # En cas d'erreur, retourner une playlist par défaut connue
-        return ["spotify:playlist:37i9dQZEVXbMDoHDwVN2tF"]  # Top 50 Global
+        return [get_simplified_playlist()]
         
     finally:
         conn.close()
+    
+    # En cas d'erreur ou si aucune amélioration n'est possible, retourner les recommandations originales
+    return base_recommendations
